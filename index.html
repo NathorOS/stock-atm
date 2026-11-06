@@ -1,0 +1,1391 @@
+<!DOCTYPE html>
+<html lang="es">
+  <head>
+    <base target="_top">
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Stock ATM">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="theme-color" content="#208b3a">
+    <title>Stock ATM · Olega</title>
+
+    <link rel="icon" type="image/png" sizes="32x32" href="favicon-32.png">
+    <link rel="icon" type="image/svg+xml" href="icon.svg">
+    <link rel="apple-touch-icon" href="apple-touch-icon.png">
+    <link rel="manifest" href="manifest.webmanifest">
+    <script src="config.js"></script>
+
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
+
+    <style>
+      body { background-color: #e9ecef; font-family: 'Poppins', sans-serif; padding: 15px; }
+      .card { border: none; border-radius: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.08); overflow: hidden; }
+      .card-header-custom { background: linear-gradient(135deg, #208b3a 0%, #10451d 100%); color: white; padding: 20px; text-align: center; border-bottom: 5px solid #ffc107; position: relative; }
+      .form-label { color: #495057; font-weight: 600; margin-bottom: 0.3rem; font-size: 0.95rem; }
+      .form-control, .form-select { border-radius: 10px; border: 1px solid #ced4da; padding: 10px 15px; background-color: #f8f9fa; }
+      .form-control:focus, .form-select:focus { border-color: #208b3a; box-shadow: 0 0 0 0.25rem rgba(32, 139, 58, 0.25); background-color: #fff; }
+
+      .btn-guardar { background: linear-gradient(135deg, #28a745 0%, #218838 100%); border: none; padding: 14px; font-size: 1.15rem; font-weight: 600; border-radius: 12px; box-shadow: 0 4px 15px rgba(40, 167, 69, 0.3); transition: all 0.3s ease; }
+
+      .numero-stock { font-size: 4rem; font-weight: 800; color: #10451d; line-height: 1; }
+      .badge-tipo { font-size: 0.75rem; border-radius: 8px; padding: 5px 8px; }
+      .badge-ingreso { background-color: #d1e7dd; color: #0f5132; }
+      .badge-consumo { background-color: #fff3cd; color: #664d03; }
+      .badge-rotura { background-color: #f8d7da; color: #842029; }
+
+      .nav-pills .nav-link { color: rgba(255,255,255,0.8); border-radius: 10px; margin: 0 2px; padding: 8px 2px; font-size: 0.8rem; transition: all 0.2s; font-weight: 600; }
+      .nav-pills .nav-link:hover { color: white; background-color: rgba(255,255,255,0.1); }
+      .nav-pills .nav-link.active { background-color: #ffc107; color: #10451d; font-weight: 700; box-shadow: 0 2px 5px rgba(0,0,0,0.2); }
+      .tab-icon { font-size: 1.2rem; display: block; margin-bottom: 2px; }
+
+      .grid-bolsones { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; margin-top: 10px; }
+      .grid-codigos { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; margin-top: 10px; }
+      .bb-input { text-align: center; font-weight: bold; font-size: 1rem; padding: 8px 5px; transition: all 0.3s ease; }
+      .bb-input:focus { transform: scale(1.03); }
+      .input-bueno { background-color: #d1e7dd !important; color: #0f5132 !important; border-color: #badbcc !important; }
+      .input-alerta { background-color: #f8d7da !important; color: #842029 !important; border-color: #f5c2c7 !important; animation: parpadeo 1s infinite alternate; }
+      .input-raro { background-color: #fff3cd !important; color: #664d03 !important; border-color: #ffe69c !important; }
+      @keyframes parpadeo { from { box-shadow: 0 0 5px red; } to { box-shadow: 0 0 15px red; } }
+
+      .seccion-app { display: none; }
+      #seccionCodigos { display: block; }
+      #divFechaIngreso, #divCliente { display: none; }
+
+      /* Tablero / Reporte / Admin (partes nuevas, mismo estilo) */
+      .wide-ok { transition: max-width .2s; }
+      .minibox { padding: 8px; border: 1px solid #dee2e6; border-radius: 10px; text-align: center; background: #fff; }
+      .minibox .t { font-size: 0.7rem; color: #6c757d; text-transform: uppercase; }
+      .minibox .n { font-size: 1.5rem; font-weight: 800; color: #10451d; line-height: 1.2; }
+      .minibox.rojo .n { color: #842029; } .minibox.rojo { background: #fdf0f1; }
+      .chartbox { position: relative; height: 260px; }
+      .titulo-bloque { font-weight: 700; color: #6c757d; border-bottom: 1px solid #dee2e6; margin: 18px 0 8px; font-size: 0.85rem; text-transform: uppercase; }
+      table.heat td, table.heat th { text-align: center; padding: 4px 6px; white-space: nowrap; font-size: 0.8rem; }
+      table.heat td.cell { font-weight: 700; min-width: 52px; border: 2px solid #fff; }
+      table.heat td.code { color: #6c757d; text-align: left; }
+      .leyenda span { margin-right: 12px; font-size: 0.75rem; color: #6c757d; }
+      .leyenda i { display: inline-block; width: 12px; height: 12px; border-radius: 3px; vertical-align: -2px; margin-right: 3px; }
+      tr.click { cursor: pointer; }
+      .overlay-conf { position: fixed; inset: 0; background: rgba(16,69,29,.55); z-index: 2000; display: flex; align-items: center; justify-content: center; padding: 16px; }
+      .modal-conf { background: #fff; border-radius: 16px; padding: 20px; width: 100%; max-width: 420px; max-height: 85vh; overflow: auto; box-shadow: 0 10px 40px rgba(0,0,0,.3); }
+      #cargando { position: fixed; inset: 0; background: rgba(16,69,29,.38); z-index: 3000; display: none; align-items: center; justify-content: center; padding: 16px; }
+      #cargando.on { display: flex; animation: aparece .15s ease-out; }
+      @keyframes aparece { from { opacity: 0; } to { opacity: 1; } }
+      .cargando-caja { background: #fff; border-radius: 22px; padding: 26px 34px; text-align: center; box-shadow: 0 12px 40px rgba(0,0,0,.3); min-width: 230px; max-width: 320px; }
+      .cargando-caja .ico { font-size: 3.2rem; line-height: 1; color: #208b3a; }
+      .cargando-txt { margin-top: 14px; font-weight: 700; color: #10451d; }
+      .firma-nathor { display: flex; align-items: center; justify-content: center; gap: 8px; margin: 4px 0 26px; font-size: 0.68rem; color: #8a949b; letter-spacing: .14em; text-transform: uppercase; }
+      .firma-nathor img { border-radius: 8px; opacity: .9; }
+      .firma-nathor b { color: #5f6b72; letter-spacing: .3em; font-weight: 700; margin-left: 4px; }
+      #instalar { position: fixed; left: 12px; right: 12px; bottom: 14px; z-index: 2500; max-width: 440px; margin: 0 auto; background: #fff; border-radius: 18px; box-shadow: 0 10px 40px rgba(0,0,0,.28); padding: 14px 16px; display: none; border-top: 4px solid #ffc107; animation: sube .3s ease-out; }
+      #instalar.on { display: block; }
+      @keyframes sube { from { transform: translateY(30px); opacity: 0; } to { transform: none; opacity: 1; } }
+      #instalar img { width: 52px; height: 52px; border-radius: 13px; flex: none; }
+      .btn-lock { position: absolute; top: 10px; right: 12px; color: rgba(255,255,255,.55); background: none; border: 0; font-size: 1.1rem; }
+      .btn-lock:hover { color: #ffc107; }
+    </style>
+  </head>
+  <body>
+    <div class="container wide-ok" id="contenedorApp" style="max-width: 450px; margin: 0 auto; padding: 0;">
+      <div class="card mt-2 mb-4">
+
+        <div class="card-header-custom pb-3">
+          <button class="btn-lock" id="tabAdmin" title="Administrador" aria-label="Administrador"><i class="bi bi-lock-fill"></i></button>
+          <h2 class="mb-0 fw-bold" style="letter-spacing: 1px;">OLEGA S.A.</h2>
+          <p class="mb-0 text-white-50" style="font-size: 0.9rem;">Blanched-Super Clean, Reducción</p>
+          <hr style="border-top: 1px solid rgba(255,255,255,0.3); margin: 10px 0;">
+
+          <ul class="nav nav-pills nav-fill mt-2" id="menuTabs">
+            <li class="nav-item"><a class="nav-link active" id="tabCodigos" href="#"><i class="bi bi-qr-code tab-icon"></i>Alta Lote</a></li>
+            <li class="nav-item"><a class="nav-link" id="tabO2" href="#"><i class="bi bi-speedometer2 tab-icon"></i>O2 ATM</a></li>
+            <li class="nav-item"><a class="nav-link" id="tabCargar" href="#"><i class="bi bi-box-seam tab-icon"></i>Stock</a></li>
+            <li class="nav-item"><a class="nav-link" id="tabVerStock" href="#"><i class="bi bi-bar-chart-fill tab-icon"></i>Tablero</a></li>
+            <li class="nav-item"><a class="nav-link" id="tabReporte" href="#"><i class="bi bi-file-earmark-pdf tab-icon"></i>Reporte</a></li>
+          </ul>
+        </div>
+
+        <div class="card-body p-4">
+
+          <!-- SECCIÓN 0: ALTA DE CÓDIGOS DE LOTE -->
+          <div id="seccionCodigos" class="seccion-app">
+            <div class="alert alert-info py-2 px-3 mb-3 text-center" style="font-size: 0.85rem;">
+              <i class="bi bi-info-circle me-1"></i>Registrar una sola vez al armar el lote.
+            </div>
+            <form id="formularioCodigos">
+              <div class="row g-2 mb-3">
+                <div class="col-6">
+                  <label class="form-label">N° Lote</label>
+                  <input type="text" class="form-control text-uppercase fw-bold" id="loteCodigos" placeholder="FR03004H26" autocomplete="off" required>
+                  <div id="alertaLoteAlta" class="mt-1" style="font-size: 0.75rem; font-weight: bold;"></div>
+                </div>
+                <div class="col-6">
+                  <label class="form-label">Responsable</label>
+                  <select class="form-select" id="respCodigos" required></select>
+                </div>
+              </div>
+              <div class="row g-2 mb-3">
+                <div class="col-12">
+                  <label class="form-label">N° de Remito / Parte (Logística)</label>
+                  <input type="text" class="form-control fw-bold" id="remitoCodigos" placeholder="Ej: R-12345" required>
+                </div>
+              </div>
+              <div class="row g-2 mb-3">
+                <div class="col-5">
+                  <label class="form-label" style="font-size: 0.85rem;">Tipo de lote</label>
+                  <select class="form-select form-select-sm" id="tipoLoteCodigos"></select>
+                </div>
+                <div class="col-7">
+                  <label class="form-label" style="font-size: 0.85rem;">Fecha y hora de tratamiento</label>
+                  <input type="datetime-local" class="form-control form-control-sm" id="tratCodigos" required>
+                </div>
+              </div>
+
+              <div class="p-3 bg-white rounded border border-primary shadow-sm mt-3">
+                <div class="text-center fw-bold text-primary mb-2" style="font-size:0.9rem;">
+                  <i class="bi bi-upc-scan me-1"></i>CÓDIGOS DE BIG BAGS <span class="badge text-bg-light border" id="contadorCodigos"></span>
+                </div>
+                <div class="grid-codigos" id="contenedorCodigos"></div>
+                <div class="d-flex gap-2 mt-3">
+                  <button type="button" class="btn btn-sm btn-outline-secondary flex-fill" id="btnMenosCodigo"><i class="bi bi-dash-lg"></i> Quitar</button>
+                  <button type="button" class="btn btn-sm btn-outline-secondary flex-fill" id="btnMasCodigo"><i class="bi bi-plus-lg"></i> Agregar</button>
+                </div>
+                <div class="text-danger fw-bold mt-2" style="font-size:0.8rem;" id="errCodigos"></div>
+              </div>
+
+              <button type="submit" class="btn btn-primary w-100 btn-guardar text-white mt-4" id="btnGuardarCodigos">
+                <i class="bi bi-save me-2"></i>Guardar Códigos de Lote
+              </button>
+            </form>
+            <div id="msjCodigos" class="mt-3 text-center fw-bold"></div>
+          </div>
+
+          <!-- SECCIÓN 1: CONTROL DE O2 ATM -->
+          <div id="seccionO2" class="seccion-app">
+            <form id="formularioO2">
+              <div class="row g-2 mb-3">
+                <div class="col-6">
+                  <label class="form-label">N° Lote</label>
+                  <input type="text" class="form-control text-uppercase fw-bold" id="loteO2" placeholder="FR03004H26" autocomplete="off" required>
+                  <div id="alertaLote" class="mt-1" style="font-size: 0.75rem; font-weight: bold;"></div>
+                </div>
+                <div class="col-6">
+                  <label class="form-label">Instancia</label>
+                  <select class="form-select" id="instanciaO2" required></select>
+                </div>
+              </div>
+
+              <div class="row g-2 mb-3">
+                <div class="col-6">
+                  <label class="form-label">Tipo Mezcla</label>
+                  <select class="form-select" id="mezclaO2"></select>
+                </div>
+                <div class="col-6">
+                  <label class="form-label">Responsable</label>
+                  <select class="form-select" id="respO2" required></select>
+                </div>
+              </div>
+
+              <div class="row g-2 mb-3">
+                <div class="col-6">
+                  <label class="form-label text-primary" style="font-size: 0.85rem;"><i class="bi bi-cloud-arrow-down me-1"></i>% Nitrógeno (N2)</label>
+                  <input type="number" step="0.1" class="form-control form-control-sm" id="porcN2" placeholder="Ej: 90.5">
+                </div>
+                <div class="col-6">
+                  <label class="form-label text-secondary" style="font-size: 0.85rem;"><i class="bi bi-cloud-arrow-down me-1"></i>% Dióxido (CO2)</label>
+                  <input type="number" step="0.1" class="form-control form-control-sm" id="porcCO2" placeholder="Ej: 9.5">
+                </div>
+              </div>
+
+              <div class="p-2 mb-3 bg-light rounded border">
+                <div class="row g-2">
+                  <div class="col-4">
+                    <label class="form-label" style="font-size: 0.75rem;">Tubos N2</label>
+                    <input type="number" step="0.5" class="form-control form-control-sm" id="tubosN2" placeholder="Ej: 3">
+                  </div>
+                  <div class="col-4">
+                    <label class="form-label" style="font-size: 0.75rem;">Tubos CO2</label>
+                    <input type="number" step="0.5" class="form-control form-control-sm" id="tubosCO2" placeholder="Ej: 1.5">
+                  </div>
+                  <div class="col-4">
+                    <label class="form-label" style="font-size: 0.75rem;">Destino</label>
+                    <select class="form-select form-select-sm" id="destinoO2"></select>
+                  </div>
+                </div>
+              </div>
+
+              <div class="mb-3">
+                <label class="form-label" style="font-size: 0.8rem;"><i class="bi bi-clock me-1"></i>Fecha y hora de la medición</label>
+                <input type="datetime-local" class="form-control form-control-sm" id="fechaO2" required>
+                <div id="horasO2" class="mt-1 text-muted" style="font-size: 0.75rem; font-weight: bold;"></div>
+              </div>
+
+              <div class="p-2 bg-white rounded border border-warning shadow-sm mt-2">
+                <div class="text-center fw-bold text-secondary mb-2" style="font-size:0.85rem;">MEDICIONES O2 (Límite: <span id="limiteTxt">6</span>%)</div>
+                <div class="grid-bolsones" id="contenedorO2"></div>
+              </div>
+
+              <div class="mt-3 mb-2">
+                <label class="form-label" style="font-size: 0.8rem;">Obs. Producción</label>
+                <input type="text" class="form-control form-control-sm" id="obsProdO2">
+              </div>
+              <div class="mb-3">
+                <label class="form-label" style="font-size: 0.8rem;">Obs. Calidad</label>
+                <input type="text" class="form-control form-control-sm" id="obsCalidadO2">
+              </div>
+
+              <button type="submit" class="btn btn-warning w-100 fw-bold py-3 text-dark mt-2" id="btnGuardarO2" disabled style="border-radius: 12px; font-size: 1.1rem; box-shadow: 0 4px 15px rgba(255, 193, 7, 0.3);">
+                <i class="bi bi-speedometer2 me-2"></i>Registrar O2
+              </button>
+            </form>
+            <div id="msjO2" class="mt-3 text-center fw-bold"></div>
+
+            <!-- MÓDULO DE NOVEDADES: REEMPLAZO DE BOLSÓN -->
+            <div class="p-3 bg-white rounded border border-warning shadow-sm mt-4 mb-2">
+              <div class="text-center fw-bold text-warning mb-3" style="font-size:1.1rem;">
+                <i class="bi bi-arrow-left-right me-1"></i>CAMBIO DE BOLSÓN
+              </div>
+
+              <form id="formularioReemplazo">
+                <div class="row g-2 mb-3">
+                  <div class="col-6">
+                    <label class="form-label text-secondary" style="font-size: 0.85rem;">Lote de Exportación</label>
+                    <input type="text" class="form-control text-uppercase fw-bold border-warning" id="loteExportacion" placeholder="Ej: FR03026H26" autocomplete="off" required>
+                  </div>
+                  <div class="col-6">
+                    <label class="form-label text-secondary" style="font-size: 0.85rem;">Posición a sacar</label>
+                    <select class="form-select fw-bold border-warning" id="posicionSaliente" required></select>
+                  </div>
+                </div>
+
+                <div class="row g-2 mb-3">
+                  <div class="col-6">
+                    <label class="form-label text-secondary" style="font-size: 0.85rem;">Lote de Backup</label>
+                    <input type="text" class="form-control text-uppercase bg-light" id="loteBackup" placeholder="Ej: LOTE-BKP" autocomplete="off" required>
+                  </div>
+                  <div class="col-6">
+                    <label class="form-label text-secondary" style="font-size: 0.85rem;">Posición a usar</label>
+                    <select class="form-select bg-light" id="posicionEntrante" required></select>
+                  </div>
+                </div>
+
+                <div class="row g-2 mb-3">
+                  <div class="col-12">
+                    <label class="form-label text-secondary" style="font-size: 0.85rem;">Responsable</label>
+                    <select class="form-select form-select-sm" id="respReemplazo" required></select>
+                  </div>
+                </div>
+
+                <div id="vistaReemplazo" class="alert alert-warning py-2 text-center fw-bold" style="font-size:0.8rem; display:none;"></div>
+
+                <button type="submit" class="btn btn-warning w-100 fw-bold text-dark" id="btnGuardarReemplazo">
+                  <i class="bi bi-arrow-repeat me-1"></i>Efectuar Reemplazo
+                </button>
+              </form>
+              <div id="msjReemplazo" class="mt-3 text-center fw-bold"></div>
+            </div>
+          </div>
+
+          <!-- SECCIÓN 2: FORMULARIO DE CARGA DE STOCK -->
+          <div id="seccionFormulario" class="seccion-app">
+            <form id="formularioStock">
+              <div class="mb-4">
+                <label class="form-label"><i class="bi bi-arrow-left-right text-primary me-2"></i>Tipo de Movimiento</label>
+                <select class="form-select form-select-lg" id="tipo" required>
+                  <option value="" selected disabled>Seleccionar...</option>
+                  <option value="Ingreso">📥 Ingreso de Stock</option>
+                  <option value="Consumo">📤 Consumo (Salida)</option>
+                  <option value="Rotura">⚠️ Rotura / Baja</option>
+                </select>
+              </div>
+
+              <div class="mb-4" id="divFechaIngreso">
+                <label class="form-label"><i class="bi bi-calendar-event text-success me-2"></i>Fecha de Ingreso</label>
+                <input type="date" class="form-control form-control-lg" id="fechaIngreso">
+              </div>
+
+              <div class="mb-4">
+                <label class="form-label"><i class="bi bi-boxes text-info me-2"></i>Cantidad (Big Bags)</label>
+                <input type="number" class="form-control form-control-lg" id="cantidad" min="1" step="1" placeholder="Ej: 10" required>
+              </div>
+
+              <div class="mb-4" id="divCliente">
+                <label class="form-label"><i class="bi bi-truck text-warning me-2"></i>Cliente / Destino</label>
+                <select class="form-select" id="cliente"></select>
+              </div>
+
+              <div class="mb-4">
+                <label class="form-label"><i class="bi bi-person-badge text-secondary me-2"></i>Responsable</label>
+                <select class="form-select" id="responsableStock" required></select>
+              </div>
+
+              <div class="mb-4">
+                <label class="form-label"><i class="bi bi-card-text text-muted me-2"></i>Observaciones</label>
+                <textarea class="form-control" id="observaciones" rows="2" placeholder="Detalles, lote, etc."></textarea>
+              </div>
+
+              <button type="submit" class="btn btn-primary w-100 btn-guardar text-white mt-2" id="btnGuardarStock">
+                <i class="bi bi-cloud-arrow-up-fill me-2"></i>Guardar Registro
+              </button>
+            </form>
+            <div id="msjStock" class="mt-3 text-center fw-bold" style="font-size: 1.1rem;"></div>
+          </div>
+
+          <!-- SECCIÓN 3: TABLERO -->
+          <div id="seccionStock" class="seccion-app">
+            <div class="text-center mb-4 mt-2">
+              <h5 class="text-muted fw-bold text-uppercase" style="letter-spacing: 1px;">En Planta</h5>
+              <div class="numero-stock" id="cifraStock">--</div>
+              <p class="text-muted mt-1 fw-bold">Big Bags ATM Disponibles</p>
+            </div>
+
+            <div class="row g-2 mb-3" id="kpisTablero"></div>
+
+            <div class="titulo-bloque"><i class="bi bi-graph-up me-1"></i>Evolución del O₂ por lote</div>
+            <select class="form-select mb-2" id="loteTablero"></select>
+            <div class="chartbox"><canvas id="chEvo"></canvas></div>
+            <div class="table-responsive mt-2" id="tablaEvo"></div>
+
+            <div class="titulo-bloque"><i class="bi bi-bar-chart me-1"></i>Promedio por tipo de medición</div>
+            <div class="chartbox"><canvas id="chTipo"></canvas></div>
+
+            <div class="titulo-bloque"><i class="bi bi-clipboard-data me-1"></i>Lotes</div>
+            <div class="table-responsive" id="tablaLotes"></div>
+
+            <div class="titulo-bloque"><i class="bi bi-box-seam me-1"></i>Stock en el tiempo</div>
+            <div class="chartbox"><canvas id="chStock"></canvas></div>
+            <div class="titulo-bloque"><i class="bi bi-truck me-1"></i>Salidas por destino</div>
+            <div class="chartbox"><canvas id="chDest"></canvas></div>
+
+            <div class="d-flex justify-content-between align-items-center border-bottom pb-2 mb-3 mt-4">
+              <h6 class="mb-0 fw-bold text-secondary">Últimos Movimientos</h6>
+              <button class="btn btn-sm btn-outline-success" id="btnRefrescarTablero"><i class="bi bi-arrow-clockwise"></i></button>
+            </div>
+            <div class="table-responsive">
+              <table class="table table-sm align-middle" style="font-size: 0.85rem;">
+                <thead><tr class="text-secondary"><th>Fecha</th><th>Tipo</th><th class="text-center">Cant.</th><th>Destino</th></tr></thead>
+                <tbody id="tablaStock"><tr><td colspan="4" class="text-center py-3"><div class="spinner-border text-success spinner-border-sm" role="status"></div> Cargando datos...</td></tr></tbody>
+              </table>
+            </div>
+          </div>
+
+          <!-- SECCIÓN 4: REPORTE Y SEGUIMIENTO DE LOTE -->
+          <div id="seccionReporte" class="seccion-app">
+            <div class="row g-2 mb-4">
+              <div class="col-8">
+                <input type="text" class="form-control form-control-lg text-uppercase fw-bold border-success" id="inputBuscarLote" placeholder="Ingresar N° de Lote..." autocomplete="off">
+                <div id="alertaLoteReporte" class="mt-1" style="font-size: 0.75rem; font-weight: bold;"></div>
+              </div>
+              <div class="col-4">
+                <button class="btn btn-success w-100 h-100 fw-bold" id="btnBuscarReporte" disabled>
+                  <i class="bi bi-search"></i> Buscar
+                </button>
+              </div>
+            </div>
+
+            <div id="informeContenedor" style="display: none;">
+              <div class="d-flex justify-content-end gap-2 mb-3">
+                <button class="btn btn-outline-success btn-sm fw-bold shadow-sm" id="btnCompartir" style="display:none"><i class="bi bi-share me-1"></i>Compartir</button>
+                <button class="btn btn-danger btn-sm fw-bold shadow-sm" id="btnPdf"><i class="bi bi-file-pdf me-1"></i>Descargar PDF</button>
+              </div>
+              <div id="msjPdf" class="mb-2 text-center"></div>
+              <div class="p-3 bg-white rounded border shadow-sm" id="hojaPDF" style="border-top: 5px solid #10451d !important;"></div>
+            </div>
+            <div id="msjReporte" class="mt-3 text-center fw-bold"></div>
+          </div>
+
+          <!-- SECCIÓN 5: ADMINISTRADOR -->
+          <div id="seccionAdmin" class="seccion-app">
+            <div id="adminPuerta">
+              <h6 class="fw-bold text-secondary text-center"><i class="bi bi-shield-lock me-1"></i>ADMINISTRADOR</h6>
+              <label class="form-label" for="adminPin">PIN</label>
+              <input type="password" inputmode="numeric" autocomplete="off" class="form-control form-control-lg text-center mb-3" id="adminPin">
+              <button class="btn btn-primary w-100 btn-guardar text-white" id="btnAdminIngresar">Ingresar</button>
+              <div id="msjAdminPin" class="mt-3 text-center fw-bold"></div>
+            </div>
+            <div id="adminPanel" style="display:none;">
+              <div class="p-3 bg-white rounded border shadow-sm mb-3">
+                <div class="fw-bold text-secondary mb-2">Lote</div>
+                <select class="form-select mb-2" id="adminLote"></select>
+                <div class="text-muted mb-2" style="font-size:0.8rem;" id="adminLoteInfo"></div>
+                <input type="text" class="form-control form-control-sm mb-2" id="adminMotivo" placeholder="Motivo">
+                <div class="d-flex gap-2">
+                  <button class="btn btn-success flex-fill fw-bold" id="btnReabrir">Reabrir</button>
+                  <button class="btn btn-outline-secondary flex-fill fw-bold" id="btnCerrar">Cerrar</button>
+                </div>
+              </div>
+              <div class="p-3 bg-white rounded border shadow-sm mb-3">
+                <div class="fw-bold text-secondary mb-2">Tipo de lote</div>
+                <div class="d-flex gap-2"><select class="form-select" id="adminTipo"></select><button class="btn btn-outline-success fw-bold" id="btnAdminTipo">Cambiar</button></div>
+                <div class="text-muted mt-1" style="font-size:0.75rem;">Los lotes Backup no cuentan en los indicadores.</div>
+              </div>
+              <div class="p-3 bg-white rounded border shadow-sm mb-3">
+                <div class="fw-bold text-secondary mb-2">Anular medición cargada por error</div>
+                <select class="form-select mb-2" id="adminMed"></select>
+                <input type="text" class="form-control form-control-sm mb-2" id="adminMedMotivo" placeholder="Motivo">
+                <button class="btn btn-danger w-100 fw-bold" id="btnAnular">Anular medición</button>
+              </div>
+              <div class="fw-bold text-secondary mb-2">Auditoría</div>
+              <div class="table-responsive"><div id="adminAud"></div></div>
+              <div id="msjAdmin" class="mt-3 text-center fw-bold"></div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </div>
+
+    <div class="firma-nathor" id="firmaNathor"><img src="data:image/png;base64,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" alt="NATHOR" width="34" height="38"><span>Desarrollado por <b>NATHOR</b></span></div>
+
+    <div id="instalar" role="dialog" aria-label="Instalar la aplicación">
+      <div class="d-flex gap-3 align-items-center">
+        <img src="icon-192.png" alt="" onerror="this.style.display='none'">
+        <div class="flex-fill">
+          <div class="fw-bold" style="color:#10451d">Instalá la app en tu celular</div>
+          <div class="text-muted" id="instalarTxt" style="font-size:0.78rem">Se abre más rápido, a pantalla completa y queda con su ícono.</div>
+        </div>
+      </div>
+      <div class="d-flex gap-2 mt-3">
+        <button type="button" class="btn btn-outline-secondary fw-bold flex-fill" id="btnInstalarNo">Ahora no</button>
+        <button type="button" class="btn btn-success fw-bold flex-fill" id="btnInstalarSi"><i class="bi bi-download me-1"></i>Instalar</button>
+      </div>
+    </div>
+
+    <div id="cargando" role="status" aria-live="polite"><div class="cargando-caja"><div id="cargandoIco"></div><div class="cargando-txt" id="cargandoTxt">Un momento…</div></div></div>
+
+    <script>
+      /* ================== UTILIDADES ================== */
+      var S = { cfg: null, tipos: null, lotes: [], ahora: '', admin: null, charts: {}, bolO2: null, loteInforme: '', rep: null };
+      function $(s, r) { return (r || document).querySelector(s); }
+      function $$(s, r) { return Array.prototype.slice.call((r || document).querySelectorAll(s)); }
+      function esc(s) { return String(s === null || s === undefined ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
+      function num(v) { if (v === '' || v === null || v === undefined) return null; var n = parseFloat(String(v).replace(',', '.')); return isNaN(n) ? null : n; }
+      function fnum(n, d) { return n === null || n === undefined ? '–' : Number(n).toLocaleString('es-AR', { minimumFractionDigits: 0, maximumFractionDigits: d === undefined ? 2 : d }); }
+      function parseAR(s) { var m = String(s || '').match(/(\d+)\/(\d+)\/(\d+) (\d+):(\d+)/); return m ? Date.UTC(+m[3], +m[2] - 1, +m[1], +m[4], +m[5]) : null; }
+      function parseLocal(s) { var m = String(s || '').match(/(\d+)-(\d+)-(\d+)T(\d+):(\d+)/); return m ? Date.UTC(+m[1], +m[2] - 1, +m[3], +m[4], +m[5]) : null; }
+      function errMsg(e) { return (e && e.message) ? e.message : String(e); }
+
+      var EN_APPS_SCRIPT = !!(window.google && google.script && google.script.run);
+      function apiUrl() { return window.ATM_API_URL || lsGet('atm_api_url') || ''; }
+      function api(fn) {
+        var args = Array.prototype.slice.call(arguments, 1);
+        if (EN_APPS_SCRIPT) {
+          return new Promise(function (res, rej) {
+            var r = google.script.run.withSuccessHandler(res).withFailureHandler(function (e) { rej(e); });
+            r[fn].apply(r, args);
+          });
+        }
+        // App instalada: se habla con el Apps Script por HTTPS (text/plain evita el preflight de CORS)
+        var url = apiUrl(); if (!url) return Promise.reject(new Error('Falta el enlace del servidor.'));
+        var ctl = new AbortController(), t = setTimeout(function () { ctl.abort(); }, 60000);
+        return fetch(url, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify({ fn: fn, args: args }), redirect: 'follow', signal: ctl.signal })
+          .then(function (r) { if (!r.ok) throw new Error('El servidor respondió ' + r.status); return r.json(); })
+          .catch(function (e) { throw new Error(e && e.name === 'AbortError' ? 'El servidor tardó demasiado en responder.' : (e && e.message === 'Failed to fetch' ? 'Sin conexión con el servidor. Revisá tu internet.' : (e && e.message) || String(e))); })
+          .finally(function () { clearTimeout(t); });
+      }
+      function opciones(sel, lista, vacio) {
+        sel.innerHTML = (vacio !== undefined ? '<option value="" selected disabled>' + esc(vacio) + '</option>' : '') +
+          lista.map(function (x) { return '<option value="' + esc(x) + '">' + esc(x) + '</option>'; }).join('');
+      }
+      var cargaN = 0, cargaT = null;
+      function cargando(msg) {
+        clearTimeout(cargaT); cargaN++;
+        document.getElementById('cargandoIco').innerHTML = '<div class="spinner-border text-success" style="width:3.2rem;height:3.2rem" aria-hidden="true"></div>';
+        document.getElementById('cargandoTxt').textContent = msg || 'Un momento…';
+        document.getElementById('cargando').classList.add('on');
+      }
+      function listo() { cargaN = Math.max(0, cargaN - 1); if (!cargaN) { clearTimeout(cargaT); document.getElementById('cargando').classList.remove('on'); } }
+      function exito(msg) {
+        cargaN = 0; clearTimeout(cargaT);
+        document.getElementById('cargandoIco').innerHTML = '<i class="bi bi-check-circle-fill ico"></i>';
+        document.getElementById('cargandoTxt').textContent = msg || '¡Listo!';
+        document.getElementById('cargando').classList.add('on');
+        cargaT = setTimeout(function () { if (!cargaN) document.getElementById('cargando').classList.remove('on'); }, 900);
+      }
+      var timers = {};
+      function aviso(id, texto, tipo, ms) {
+        var m = document.getElementById(id); if (!m) return;
+        var icono = tipo === 'danger' ? 'x-circle-fill' : (tipo === 'warning' ? 'exclamation-triangle-fill' : 'check-circle-fill');
+        m.innerHTML = '<div class="alert alert-' + tipo + ' py-2' + (tipo === 'danger' ? ' fw-bold' : '') + '" style="white-space:pre-line"><i class="bi bi-' + icono + ' me-2"></i>' + esc(texto) + '</div>';
+        try { m.scrollIntoView({ behavior: 'smooth', block: 'center' }); } catch (e) {}
+        clearTimeout(timers[id]);
+        if (ms) timers[id] = setTimeout(function () { m.innerHTML = ''; }, ms);
+      }
+      function confirmar(titulo, lista, okTxt) {
+        return new Promise(function (res) {
+          var o = document.createElement('div'); o.className = 'overlay-conf';
+          o.innerHTML = '<div class="modal-conf" role="dialog" aria-modal="true"><h5 class="fw-bold text-danger"><i class="bi bi-exclamation-triangle-fill me-2"></i>' + esc(titulo) + '</h5><ul class="my-3 ps-3">' +
+            lista.map(function (x) { return '<li class="mb-2">' + esc(x) + '</li>'; }).join('') + '</ul><div class="d-flex gap-2"><button class="btn btn-outline-secondary flex-fill fw-bold" data-r="0">Volver</button><button class="btn btn-warning flex-fill fw-bold" data-r="1">' + esc(okTxt || 'Guardar igual') + '</button></div></div>';
+          o.addEventListener('click', function (e) { var b = e.target.closest('button'); if (b || e.target === o) { o.remove(); res(!!(b && b.dataset.r === '1')); } });
+          document.body.appendChild(o);
+        });
+      }
+      /** Envía una escritura. Si el servidor pide confirmación la muestra y reenvía. Devuelve la respuesta ok o null. */
+      async function enviar(fn, payload, btn, msgId, cargandoTxt) {
+        var orig = btn.innerHTML, ok = false;
+        function ocupado() { btn.disabled = true; btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>' + cargandoTxt; cargando(cargandoTxt); }
+        function libre() { btn.disabled = false; btn.innerHTML = orig; }
+        ocupado();
+        try {
+          var r = await api(fn, payload);
+          if (r && r.requiereConfirmacion) {
+            listo(); libre();
+            if (!await confirmar('Revisá antes de guardar', r.advertencias)) return null;
+            ocupado(); payload.confirmar = true; r = await api(fn, payload);
+          }
+          if (!r || !r.ok) { listo(); aviso(msgId, (r && r.error) || 'No se pudo guardar.', 'danger', 9000); return null; }
+          ok = true; exito('¡Guardado!'); aviso(msgId, r.mensaje, 'success', 7000); return r;
+        } catch (e) { listo(); aviso(msgId, 'Fallo de conexión: ' + errMsg(e), 'danger', 9000); return null; }
+        finally { libre(); }
+      }
+      async function leer(fn, a, b) {
+        try { var r = await api(fn, a, b); if (!r.ok) { return { error: r.error }; } return r; }
+        catch (e) { return { error: 'Fallo de conexión: ' + errMsg(e) }; }
+      }
+      function lotePorCodigo(c) { c = String(c || '').toUpperCase().trim(); return S.lotes.filter(function (l) { return l.lote === c; })[0] || null; }
+      function debounce(fn, ms) { var t; return function () { var a = arguments, s = this; clearTimeout(t); t = setTimeout(function () { fn.apply(s, a); }, ms); }; }
+
+      function colorO2(v, u) {
+        if (v === null || v === undefined) return { bg: '#f1f3f2', fg: '#9aa6a3' };
+        if (v >= u) return { bg: '#b02a37', fg: '#fff' };
+        var t = Math.max(0, Math.min(1, v / u)), a = [209, 231, 221], b = [255, 224, 130];
+        return { bg: 'rgb(' + a.map(function (x, i) { return Math.round(x + (b[i] - x) * t); }).join(',') + ')', fg: '#212529' };
+      }
+
+      /* ================== NAVEGACIÓN ================== */
+      var tabs = ['tabCodigos', 'tabO2', 'tabCargar', 'tabVerStock', 'tabReporte', 'tabAdmin'];
+      var sections = ['seccionCodigos', 'seccionO2', 'seccionFormulario', 'seccionStock', 'seccionReporte', 'seccionAdmin'];
+      var anchas = ['seccionStock', 'seccionReporte', 'seccionAdmin'];
+      function irSeccion(index) {
+        if (index < 5) lsSet('atm_tab', String(index));
+        sections.forEach(function (s) { document.getElementById(s).style.display = 'none'; });
+        tabs.forEach(function (t) { document.getElementById(t).classList.remove('active'); });
+        document.getElementById(sections[index]).style.display = 'block';
+        document.getElementById(tabs[index]).classList.add('active');
+        document.getElementById('contenedorApp').style.maxWidth = anchas.indexOf(sections[index]) >= 0 ? '860px' : '450px';
+        if (tabs[index] === 'tabVerStock') cargarTablero();
+        if (tabs[index] === 'tabAdmin') prepararAdmin();
+      }
+      tabs.forEach(function (tab, index) {
+        document.getElementById(tab).onclick = function (e) { e.preventDefault(); irSeccion(index); window.scrollTo(0, 0); };
+      });
+
+      /* ================== INICIO ================== */
+      async function iniciar() {
+        if (!EN_APPS_SCRIPT && !apiUrl()) await pedirUrlApi();
+        cargando('Cargando datos…');
+        try { await iniciar_(); } finally { listo(); }
+      }
+      async function iniciar_() {
+        var r = await leer('obtenerInicio');
+        if (r.error) { aviso('msjCodigos', 'No se pudieron cargar los datos: ' + r.error + ' Recargá la página.', 'danger'); return; }
+        S.cfg = r.config; S.tipos = r.tipos; S.lotes = r.lotes; S.ahora = r.ahora;
+        var resp = ['respCodigos', 'respO2', 'respReemplazo', 'responsableStock'];
+        resp.forEach(function (id) { opciones(document.getElementById(id), S.cfg.responsables, '...'); });
+        opciones(document.getElementById('mezclaO2'), S.cfg.mezclas, '...');
+        opciones(document.getElementById('destinoO2'), S.cfg.destinos, '...');
+        opciones(document.getElementById('cliente'), S.cfg.destinos, 'Seleccionar Cliente...');
+        opciones(document.getElementById('tipoLoteCodigos'), S.cfg.tiposLote); opciones(document.getElementById('adminTipo'), S.cfg.tiposLote);
+        document.getElementById('limiteTxt').textContent = fnum(S.cfg.umbral);
+        document.getElementById('tratCodigos').value = S.ahora; document.getElementById('fechaO2').value = S.ahora;
+        document.getElementById('fechaIngreso').value = S.ahora.slice(0, 10);
+        try { var u = localStorage.getItem('resp'); if (u && S.cfg.responsables.indexOf(u) >= 0) resp.forEach(function (id) { document.getElementById(id).value = u; }); } catch (x) {}
+        resp.forEach(function (id) {
+          document.getElementById(id).addEventListener('change', function (e) {
+            resp.forEach(function (o) { document.getElementById(o).value = e.target.value; });
+            try { localStorage.setItem('resp', e.target.value); } catch (x) {}
+          });
+        });
+        nCodigos = S.cfg.bolsonesPorLote; armarCodigos();
+        armarO2(S.cfg.bolsonesPorLote, null);
+        instanciaOpciones(null);
+        posOpciones('posicionSaliente', S.cfg.bolsonesPorLote); posOpciones('posicionEntrante', S.cfg.bolsonesPorLote);
+        await restaurarBorradores();
+      }
+      async function recargarLotes() { var r = await leer('obtenerInicio'); if (!r.error) { S.lotes = r.lotes; S.ahora = r.ahora; } }
+
+      /* ================== 0. ALTA DE CÓDIGOS ================== */
+      var nCodigos = 20;
+      var contCodigos = document.getElementById('contenedorCodigos');
+      function armarCodigos() {
+        var prev = $$('.cod-input', contCodigos).map(function (i) { return i.value; });
+        contCodigos.innerHTML = '';
+        for (var i = 1; i <= nCodigos; i++) {
+          var inp = document.createElement('input');
+          inp.type = 'text'; inp.inputMode = 'numeric'; inp.autocomplete = 'off'; inp.enterKeyHint = 'next';
+          inp.maxLength = S.cfg ? S.cfg.largoCodigo : 6;
+          inp.className = 'form-control bb-input bg-light border-primary-subtle cod-input';
+          inp.placeholder = 'BB ' + i; inp.id = 'cod_' + i; inp.value = prev[i - 1] || '';
+          contCodigos.appendChild(inp);
+        }
+        validarCodigos();
+      }
+      document.getElementById('btnMasCodigo').onclick = function () { if (nCodigos < 60) { nCodigos++; armarCodigos(); } };
+      document.getElementById('btnMenosCodigo').onclick = function () { if (nCodigos > 1) { nCodigos--; armarCodigos(); } };
+      contCodigos.addEventListener('input', function (e) { e.target.value = e.target.value.replace(/\D/g, ''); validarCodigos(); });
+      contCodigos.addEventListener('keydown', function (e) {
+        if (e.key !== 'Enter') return; e.preventDefault();
+        var ins = $$('.cod-input', contCodigos), k = ins.indexOf(e.target); if (ins[k + 1]) ins[k + 1].focus(); else e.target.blur();
+      });
+      // Pegar una lista (de planilla o de otro mensaje) en cualquier casillero reparte los códigos
+      contCodigos.addEventListener('paste', function (e) {
+        var txt = (e.clipboardData || window.clipboardData).getData('text'), cods = txt.split(/[\s,;]+/).filter(Boolean);
+        if (cods.length < 2) return;
+        e.preventDefault();
+        var ins = $$('.cod-input', contCodigos), k = ins.indexOf(e.target);
+        if (k + cods.length > nCodigos) { nCodigos = Math.min(60, k + cods.length); armarCodigos(); ins = $$('.cod-input', contCodigos); }
+        cods.forEach(function (c, j) { if (ins[k + j]) ins[k + j].value = c.replace(/\D/g, ''); });
+        validarCodigos();
+      });
+      function validarCodigos() {
+        var L = S.cfg ? S.cfg.largoCodigo : 6, ins = $$('.cod-input', contCodigos), vistos = {}, errs = [], llenos = 0;
+        ins.forEach(function (i) { if (i.value) vistos[i.value] = (vistos[i.value] || 0) + 1; });
+        ins.forEach(function (i) {
+          var v = i.value, mal = '';
+          if (v) { llenos++; if (v.length !== L) mal = 'largo'; else if (vistos[v] > 1) mal = 'dup'; }
+          i.classList.toggle('input-raro', mal === 'largo'); i.classList.toggle('input-alerta', mal === 'dup');
+          if (mal === 'dup' && errs.indexOf('Hay códigos repetidos.') < 0) errs.push('Hay códigos repetidos.');
+          if (mal === 'largo' && errs.indexOf('Cada código debe tener ' + L + ' dígitos.') < 0) errs.push('Cada código debe tener ' + L + ' dígitos.');
+        });
+        document.getElementById('contadorCodigos').textContent = llenos + '/' + ins.length;
+        document.getElementById('errCodigos').textContent = errs.join(' ');
+        return { errores: errs.length, llenos: llenos, total: ins.length };
+      }
+      document.getElementById('loteCodigos').addEventListener('input', function () {
+        var l = lotePorCodigo(this.value), a = document.getElementById('alertaLoteAlta');
+        if (!this.value.trim()) { a.innerHTML = ''; return; }
+        a.innerHTML = l ? '<span class="text-danger"><i class="bi bi-x-circle-fill"></i> Este lote ya existe.</span>' : '<span class="text-success"><i class="bi bi-check-circle-fill"></i> Lote nuevo.</span>';
+      });
+      document.getElementById('formularioCodigos').addEventListener('submit', async function (e) {
+        e.preventDefault();
+        var v = validarCodigos();
+        if (v.errores) return aviso('msjCodigos', 'Corregí los códigos marcados.', 'danger', 6000);
+        var cods = $$('.cod-input', contCodigos).map(function (i) { return i.value; });
+        while (cods.length && !cods[cods.length - 1]) cods.pop();   // lotes con menos casilleros completos
+        if (!cods.length) return aviso('msjCodigos', 'Faltan los códigos de los big bags.', 'danger', 6000);
+        var datos = {
+          lote: document.getElementById('loteCodigos').value, responsable: document.getElementById('respCodigos').value,
+          remito: document.getElementById('remitoCodigos').value, tipoLote: document.getElementById('tipoLoteCodigos').value,
+          tratamiento: document.getElementById('tratCodigos').value, codigos: cods
+        };
+        var r = await enviar('registrarLote', datos, document.getElementById('btnGuardarCodigos'), 'msjCodigos', 'Guardando el lote…');
+        if (r) {
+          resetAlta(); await recargarLotes();
+        }
+      });
+
+      /* ================== 1. O2 ATM ================== */
+      var contO2 = document.getElementById('contenedorO2');
+      function armarO2(n, bolsones) {
+        contO2.innerHTML = '';
+        var posiciones = bolsones ? bolsones.map(function (b) { return b.pos; }) : Array.apply(null, Array(n)).map(function (_, i) { return i + 1; });
+        posiciones.forEach(function (pos, k) {
+          var inp = document.createElement('input');
+          inp.type = 'number'; inp.step = 'any'; inp.min = '0'; inp.inputMode = 'decimal'; inp.enterKeyHint = 'next';
+          inp.className = 'form-control bb-input bg-light'; inp.placeholder = String(pos); inp.id = 'o2_' + pos; inp.dataset.pos = pos;
+          if (bolsones) inp.title = 'Código ' + bolsones[k].codigo + (bolsones[k].ultimoO2 !== null ? ' · anterior ' + bolsones[k].ultimoO2 : '');
+          inp.addEventListener('input', function () {
+            var v = parseFloat(String(this.value).replace(',', '.'));
+            if (!isNaN(v)) {
+              if (v >= S.cfg.umbral) { this.classList.add('input-alerta'); this.classList.remove('input-bueno'); }
+              else { this.classList.add('input-bueno'); this.classList.remove('input-alerta'); }
+            } else { this.className = 'form-control bb-input bg-light'; }
+          });
+          inp.addEventListener('keydown', function (e) {
+            if (e.key !== 'Enter') return; e.preventDefault();
+            var ins = $$('input', contO2), k2 = ins.indexOf(this); if (ins[k2 + 1]) ins[k2 + 1].focus(); else this.blur();
+          });
+          contO2.appendChild(inp);
+        });
+      }
+      function instanciaOpciones(lote) {
+        var T = S.tipos, sel = document.getElementById('instanciaO2');
+        var def = '<option value="" selected disabled>Seleccionar...</option>';
+        function op(v, txt, off) { return '<option value="' + esc(v) + '"' + (off ? ' disabled' : '') + '>' + esc(txt + (off ? ' (ya cargada)' : '')) + '</option>'; }
+        sel.innerHTML = def + op(T.INICIAL, '24 Hs', lote && lote.tieneInicial) + op(T.INTERMEDIA, 'Intermedia', false) + op(T.FINAL, 'Pre-carga (final)', lote && lote.tieneFinal);
+        sel.dispatchEvent(new Event('change'));
+      }
+      // Bloqueo de gas/tubos/destino: solo en la medición de 24 hs (igual que antes)
+      document.getElementById('instanciaO2').addEventListener('change', function () {
+        var habilitar = (this.value === S.tipos.INICIAL);
+        ['mezclaO2', 'porcN2', 'porcCO2', 'tubosN2', 'tubosCO2', 'destinoO2'].forEach(function (id) {
+          var el = document.getElementById(id);
+          el.disabled = !habilitar;
+          if (!habilitar) el.value = '';
+          if (id === 'destinoO2' || id === 'mezclaO2') el.required = habilitar;
+        });
+        horasO2();
+      });
+      document.getElementById('mezclaO2').addEventListener('change', function () {
+        if (this.value === 'N2') { porcN2.value = 100; porcCO2.value = 0; tubosCO2.value = 0; }
+        else if (this.value === 'CO2+N2' && !porcN2.value) { porcN2.value = 70; porcCO2.value = 30; }
+      });
+      document.getElementById('porcN2').addEventListener('input', function () { var n = num(this.value); if (n !== null && n >= 0 && n <= 100) document.getElementById('porcCO2').value = Math.round((100 - n) * 10) / 10; });
+      document.getElementById('fechaO2').addEventListener('input', horasO2);
+      function horasO2() {
+        var el = document.getElementById('horasO2'), l = S.bolO2 && S.bolO2.lote;
+        el.className = 'mt-1 text-muted'; el.textContent = '';
+        if (!l) return;
+        var tr = parseAR(l.tratamiento), f = parseLocal(document.getElementById('fechaO2').value);
+        if (!tr) { el.textContent = 'El lote no tiene fecha de tratamiento: la medición quedará sin horas.'; return; }
+        if (!f) return;
+        var h = (f - tr) / 3600000;
+        if (h < 0) { el.className = 'mt-1 text-danger'; el.textContent = 'La fecha es anterior al tratamiento.'; }
+        else el.textContent = 'Horas desde el tratamiento: ' + fnum(Math.round(h * 10) / 10, 1) + ' h';
+      }
+      // Validador de lote en tiempo real
+      async function verificarO2Ahora() {
+        var inp = document.getElementById('loteO2'), alerta = document.getElementById('alertaLote'), btn = document.getElementById('btnGuardarO2');
+        var v = inp.value.toUpperCase().trim();
+        inp.classList.remove('is-valid', 'is-invalid'); btn.disabled = true; S.bolO2 = null;
+        if (!v) { alerta.innerHTML = ''; return; }
+        var l = lotePorCodigo(v);
+        if (!l) { alerta.innerHTML = '<span class="text-danger"><i class="bi bi-x-circle-fill"></i> Lote inexistente. Alta requerida.</span>'; inp.classList.add('is-invalid'); return; }
+        if (l.cerrado) { alerta.innerHTML = '<span class="text-danger"><i class="bi bi-lock-fill"></i> Lote cerrado. Pedí a un administrador que lo reabra.</span>'; inp.classList.add('is-invalid'); return; }
+        alerta.innerHTML = '<span class="text-primary"><i class="bi bi-search"></i> Verificando...</span>';
+        cargando('Verificando el lote…');
+        var r; try { r = await leer('obtenerBolsones', l.lote); } finally { listo(); }
+        if (document.getElementById('loteO2').value.toUpperCase().trim() !== v) return;   // siguió escribiendo
+        if (r.error) { alerta.innerHTML = '<span class="text-danger">' + esc(r.error) + '</span>'; inp.classList.add('is-invalid'); return; }
+        S.bolO2 = r; armarO2(r.bolsones.length, r.bolsones); instanciaOpciones(r.lote);
+        document.getElementById('instanciaO2').value = r.lote.tieneInicial ? S.tipos.INTERMEDIA : S.tipos.INICIAL;
+        document.getElementById('instanciaO2').dispatchEvent(new Event('change'));
+        alerta.innerHTML = '<span class="text-success"><i class="bi bi-check-circle-fill"></i> Lote verificado' + (r.tipoLote === 'Backup' ? ' (backup)' : '') + '. Podés guardar.</span>';
+        inp.classList.add('is-valid'); btn.disabled = false; horasO2();
+      }
+      var verificarO2 = debounce(verificarO2Ahora, 350);
+      document.getElementById('loteO2').addEventListener('input', verificarO2);
+
+      document.getElementById('formularioO2').addEventListener('submit', async function (e) {
+        e.preventDefault();
+        var T = S.tipos, tipo = document.getElementById('instanciaO2').value;
+        var valores = $$('input', contO2).map(function (i) { return { pos: i.dataset.pos, o2: i.value }; }).filter(function (x) { return x.o2 !== ''; });
+        if (!valores.length) return aviso('msjO2', 'Cargá al menos un valor de O₂.', 'danger', 6000);
+        var datos = {
+          lote: document.getElementById('loteO2').value, tipo: tipo, responsable: document.getElementById('respO2').value,
+          fechaHora: document.getElementById('fechaO2').value, valores: valores,
+          obsProduccion: document.getElementById('obsProdO2').value, obsCalidad: document.getElementById('obsCalidadO2').value
+        };
+        if (tipo === T.INICIAL) datos.gas = { mezcla: document.getElementById('mezclaO2').value, destino: document.getElementById('destinoO2').value, n2: document.getElementById('porcN2').value, co2: document.getElementById('porcCO2').value, tubosN2: document.getElementById('tubosN2').value, tubosCO2: document.getElementById('tubosCO2').value };
+        var r = await enviar('registrarMedicion', datos, document.getElementById('btnGuardarO2'), 'msjO2', 'Guardando la medición…');
+        if (r) {
+          resetO2(); await recargarLotes();
+        }
+      });
+
+      /* ================== CAMBIO DE BOLSÓN ================== */
+      function posOpciones(id, n, mantener) {
+        var s = document.getElementById(id), prev = s.value, h = '<option value="" selected disabled>Elegir N°...</option>';
+        for (var i = 1; i <= n; i++) h += '<option value="' + i + '">Big Bag N° ' + i + '</option>';
+        s.innerHTML = h; if (mantener && prev && +prev <= n) s.value = prev;
+      }
+      async function ajustarPosiciones(inputId, selId) {
+        var l = lotePorCodigo(document.getElementById(inputId).value), inp = document.getElementById(inputId);
+        inp.classList.remove('is-valid', 'is-invalid');
+        if (!inp.value.trim()) { posOpciones(selId, S.cfg.bolsonesPorLote); vistaReemplazo(); return; }
+        if (!l) { inp.classList.add('is-invalid'); posOpciones(selId, S.cfg.bolsonesPorLote); vistaReemplazo(); return; }
+        inp.classList.add('is-valid'); posOpciones(selId, l.bolsones, true); vistaReemplazo();
+      }
+      document.getElementById('loteExportacion').addEventListener('input', debounce(function () { ajustarPosiciones('loteExportacion', 'posicionSaliente'); }, 250));
+      document.getElementById('loteBackup').addEventListener('input', debounce(function () { ajustarPosiciones('loteBackup', 'posicionEntrante'); }, 250));
+      ['posicionSaliente', 'posicionEntrante'].forEach(function (id) { document.getElementById(id).addEventListener('change', vistaReemplazo); });
+      function vistaReemplazo() {
+        var v = document.getElementById('vistaReemplazo'), a = document.getElementById('loteExportacion').value.toUpperCase().trim(), b = document.getElementById('loteBackup').value.toUpperCase().trim();
+        var pa = document.getElementById('posicionSaliente').value, pb = document.getElementById('posicionEntrante').value;
+        if (!lotePorCodigo(a) || !lotePorCodigo(b) || !pa || !pb) { v.style.display = 'none'; return; }
+        v.style.display = 'block'; v.textContent = a + ' B' + pa + '  ⇄  ' + b + ' B' + pb;
+      }
+      document.getElementById('formularioReemplazo').addEventListener('submit', async function (e) {
+        e.preventDefault();
+        var datos = {
+          loteReal: document.getElementById('loteExportacion').value.trim(), posReal: document.getElementById('posicionSaliente').value,
+          loteBackup: document.getElementById('loteBackup').value.trim(), posBackup: document.getElementById('posicionEntrante').value,
+          responsable: document.getElementById('respReemplazo').value, obs: ''
+        };
+        var r = await enviar('cambiarBolson', datos, document.getElementById('btnGuardarReemplazo'), 'msjReemplazo', 'Registrando el cambio…');
+        if (r) {
+          resetReemplazo();
+        }
+      });
+
+      /* ================== 2. STOCK (CARGA) ================== */
+      document.getElementById('tipo').addEventListener('change', function () {
+        var t = this.value;
+        document.getElementById('divFechaIngreso').style.display = (t === 'Ingreso') ? 'block' : 'none';
+        document.getElementById('fechaIngreso').required = (t === 'Ingreso');
+        document.getElementById('divCliente').style.display = (t === 'Consumo' || t === 'Rotura') ? 'block' : 'none';
+        document.getElementById('cliente').required = (t === 'Consumo' || t === 'Rotura');
+      });
+      document.getElementById('formularioStock').addEventListener('submit', async function (e) {
+        e.preventDefault();
+        var t = document.getElementById('tipo').value;
+        var datos = {
+          tipo: t, fecha: t === 'Ingreso' ? document.getElementById('fechaIngreso').value : '', cantidad: document.getElementById('cantidad').value,
+          destino: t === 'Ingreso' ? '' : document.getElementById('cliente').value, responsable: document.getElementById('responsableStock').value,
+          obs: document.getElementById('observaciones').value
+        };
+        var r = await enviar('registrarMovimiento', datos, document.getElementById('btnGuardarStock'), 'msjStock', 'Guardando el movimiento…');
+        if (r) {
+          resetStock();
+        }
+      });
+
+      /* ================== 3. TABLERO ================== */
+      function grafico(id, cfg) {
+        if (S.charts[id]) S.charts[id].destroy();
+        var cv = document.getElementById(id); if (!cv || typeof Chart === 'undefined') return null;
+        cfg.options = Object.assign({ responsive: true, maintainAspectRatio: false, animation: { duration: 300 } }, cfg.options || {});
+        S.charts[id] = new Chart(cv, cfg); return S.charts[id];
+      }
+      var COL = { verde: '#208b3a', verdeOsc: '#10451d', rojo: '#b02a37', amarillo: '#e0a800', gris: '#9aa6a3', tinta: '#212529' };
+      function ejes(tit, max) { return { x: { grid: { display: false }, ticks: { maxRotation: 45, autoSkip: true } }, y: { beginAtZero: true, suggestedMax: max, title: { display: !!tit, text: tit } } }; }
+
+      document.getElementById('btnRefrescarTablero').onclick = function () { cargarTablero(); };
+      document.getElementById('loteTablero').addEventListener('change', function () { cargarTablero(this.value); });
+      async function cargarTablero(sel) {
+        document.getElementById('cifraStock').innerText = '...';
+        cargando('Actualizando el tablero…');
+        var res; try { res = await Promise.all([leer('obtenerTablero', sel || document.getElementById('loteTablero').value || ''), leer('obtenerStock')]); } finally { listo(); }
+        var t = res[0], s = res[1];
+        if (s.error) document.getElementById('tablaStock').innerHTML = '<tr><td colspan="4" class="text-danger text-center py-3">' + esc(s.error) + '</td></tr>';
+        else renderStock(s);
+        if (t.error) { document.getElementById('kpisTablero').innerHTML = '<div class="col-12 text-danger fw-bold">' + esc(t.error) + '</div>'; return; }
+        var k = t.kpis, u = t.umbral;
+        document.getElementById('kpisTablero').innerHTML =
+          '<div class="col-6"><div class="minibox"><div class="t">Lotes reales</div><div class="n">' + k.lotes + '</div><div class="t">' + k.abiertos + ' abiertos</div></div></div>' +
+          '<div class="col-6"><div class="minibox"><div class="t">Big bags medidos</div><div class="n">' + k.bolsasMedidas + '</div></div></div>' +
+          '<div class="col-6"><div class="minibox ' + (k.bolsasFuera ? 'rojo' : '') + '"><div class="t">Fuera de límite</div><div class="n">' + k.bolsasFuera + '</div><div class="t">' + fnum(k.pctFuera, 1) + ' %</div></div></div>' +
+          '<div class="col-6"><div class="minibox"><div class="t">O₂ máximo actual</div><div class="n">' + fnum(k.max) + '%</div><div class="t">' + k.lotesConAlerta + ' lotes con alerta</div></div></div>';
+        var sl = document.getElementById('loteTablero'); opciones(sl, t.lotesReales.slice().reverse()); sl.value = t.seleccionado;
+        var ev = t.evolucion;
+        grafico('chEvo', { type: 'line', data: { labels: ev.map(function (e) { return e.etiqueta; }), datasets: [
+          { label: 'Máximo', data: ev.map(function (e) { return e.max; }), borderColor: COL.rojo, backgroundColor: COL.rojo, borderWidth: 2.5, pointRadius: 4, tension: .2 },
+          { label: 'Promedio', data: ev.map(function (e) { return e.prom; }), borderColor: COL.verde, backgroundColor: COL.verde, borderWidth: 2.5, pointRadius: 4, tension: .2 },
+          { label: 'Mínimo', data: ev.map(function (e) { return e.min; }), borderColor: COL.gris, backgroundColor: COL.gris, borderWidth: 1.5, pointRadius: 3, borderDash: [4, 3], tension: .2 },
+          { label: 'Límite ' + fnum(u) + '%', data: ev.map(function () { return u; }), borderColor: COL.tinta, borderDash: [8, 5], borderWidth: 1.5, pointRadius: 0 }] },
+          options: { plugins: { legend: { position: 'bottom' } }, scales: ejes('O₂ (%)', u + 2) } });
+        document.getElementById('tablaEvo').innerHTML = ev.length ? '<table class="table table-sm" style="font-size:0.8rem"><thead><tr class="text-secondary"><th>Medición</th><th>Fecha</th><th>Hs</th><th>Prom</th><th>Máx</th><th>Fuera</th></tr></thead><tbody>' +
+          ev.map(function (e) { return '<tr><td>' + esc(e.tipo) + '</td><td>' + esc(e.fecha.slice(0, 16)) + '</td><td>' + fnum(e.horas, 1) + '</td><td>' + fnum(e.prom) + '</td><td>' + fnum(e.max) + '</td><td>' + (e.fuera ? '<span class="badge badge-rotura">' + e.fuera + '</span>' : '<span class="badge badge-ingreso">0</span>') + '</td></tr>'; }).join('') + '</tbody></table>' : '<div class="text-muted text-center py-2" style="font-size:0.85rem">Este lote todavía no tiene mediciones.</div>';
+        grafico('chTipo', { type: 'bar', data: { labels: t.promedios.map(function (p) { return p.tipo; }), datasets: [
+          { label: 'Promedio', data: t.promedios.map(function (p) { return p.prom; }), backgroundColor: COL.verde, borderRadius: 4 },
+          { label: 'Máximo', data: t.promedios.map(function (p) { return p.max; }), backgroundColor: COL.amarillo, borderRadius: 4 }] },
+          options: { plugins: { legend: { position: 'bottom' } }, scales: ejes('O₂ (%)') } });
+        document.getElementById('tablaLotes').innerHTML = '<table class="table table-sm align-middle" style="font-size:0.8rem"><thead><tr class="text-secondary"><th>Lote</th><th>Estado</th><th>Destino</th><th>Med.</th><th>Prom</th><th>Máx</th><th>Fuera</th></tr></thead><tbody>' +
+          t.tabla.map(function (l) { return '<tr class="click" data-l="' + esc(l.lote) + '"><td class="fw-bold">' + esc(l.lote) + '</td><td><span class="badge ' + (l.cerrado ? 'text-bg-secondary' : 'badge-ingreso') + '">' + esc(l.estado) + '</span></td><td>' + esc(l.destino) + '</td><td>' + l.mediciones + '</td><td>' + fnum(l.prom) + '</td><td>' + fnum(l.max) + '</td><td>' + (l.fuera ? '<span class="badge badge-rotura">' + l.fuera + '</span>' : '<span class="badge badge-ingreso">0</span>') + '</td></tr>'; }).join('') + '</tbody></table>';
+      }
+      document.getElementById('tablaLotes').addEventListener('click', function (e) {
+        var tr = e.target.closest('tr[data-l]'); if (!tr) return;
+        document.getElementById('inputBuscarLote').value = tr.dataset.l; irSeccion(4); validarReporte(); buscarReporte(); window.scrollTo(0, 0);
+      });
+      function renderStock(s) {
+        document.getElementById('cifraStock').innerText = s.stock;
+        var serie = s.serie.filter(function (x) { return x.fecha; });
+        grafico('chStock', { type: 'line', data: { labels: serie.map(function (x) { return x.fecha.split('-').reverse().join('/'); }), datasets: [{ label: 'Stock', data: serie.map(function (x) { return x.saldo; }), borderColor: COL.verde, backgroundColor: 'rgba(32,139,58,.12)', fill: true, stepped: true, pointRadius: 2, borderWidth: 2 }] }, options: { plugins: { legend: { display: false } }, scales: ejes('Big bags') } });
+        grafico('chDest', { type: 'bar', data: { labels: s.destinos.map(function (d) { return d.destino; }), datasets: [{ label: 'Big bags', data: s.destinos.map(function (d) { return d.cantidad; }), backgroundColor: COL.verde, borderRadius: 4 }] }, options: { indexAxis: 'y', plugins: { legend: { display: false } }, scales: { x: { beginAtZero: true }, y: { grid: { display: false } } } } });
+        var h = '';
+        if (!s.recientes.length) h = '<tr><td colspan="4" class="text-center text-muted py-3">No hay movimientos registrados.</td></tr>';
+        s.recientes.forEach(function (m) {
+          var cl = m.tipo === 'Consumo' ? 'badge-consumo' : (m.tipo === 'Rotura' ? 'badge-rotura' : 'badge-ingreso'), sg = m.tipo === 'Ingreso' ? '+' : '-';
+          h += '<tr><td class="text-muted">' + esc(m.fecha) + '</td><td><span class="badge ' + cl + ' border border-light-subtle">' + esc(m.tipo) + '</span></td><td class="text-center fw-bold">' + sg + m.cantidad + '</td><td class="text-muted">' + esc(m.destino) + '</td></tr>';
+        });
+        document.getElementById('tablaStock').innerHTML = h;
+      }
+
+      /* ================== 4. REPORTE ================== */
+      var validarReporte = debounce(function () {
+        var inp = document.getElementById('inputBuscarLote'), a = document.getElementById('alertaLoteReporte'), btn = document.getElementById('btnBuscarReporte');
+        inp.classList.remove('is-valid', 'is-invalid'); btn.disabled = true;
+        if (!inp.value.trim()) { a.innerHTML = ''; return; }
+        if (lotePorCodigo(inp.value)) { a.innerHTML = '<span class="text-success"><i class="bi bi-check-circle-fill"></i> Lote validado. Podés buscar.</span>'; inp.classList.add('is-valid'); btn.disabled = false; }
+        else { a.innerHTML = '<span class="text-danger"><i class="bi bi-x-circle-fill"></i> Lote inexistente.</span>'; inp.classList.add('is-invalid'); }
+      }, 250);
+      document.getElementById('inputBuscarLote').addEventListener('input', validarReporte);
+      document.getElementById('inputBuscarLote').addEventListener('keydown', function (e) { if (e.key === 'Enter') { e.preventDefault(); if (!document.getElementById('btnBuscarReporte').disabled) buscarReporte(); } });
+      document.getElementById('btnBuscarReporte').onclick = buscarReporte;
+      async function buscarReporte() {
+        var lote = document.getElementById('inputBuscarLote').value.toUpperCase().trim(), btn = document.getElementById('btnBuscarReporte');
+        if (!lotePorCodigo(lote)) return validarReporte();
+        btn.disabled = true; btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span>';
+        document.getElementById('msjReporte').innerHTML = ''; document.getElementById('informeContenedor').style.display = 'none';
+        cargando('Armando el reporte…');
+        var r; try { r = await leer('obtenerReporte', lote); } finally { listo(); }
+        btn.disabled = false; btn.innerHTML = '<i class="bi bi-search"></i> Buscar';
+        if (r.error) return aviso('msjReporte', r.error, 'danger');
+        S.loteInforme = lote; S.rep = r; renderReporte(r);
+        document.getElementById('informeContenedor').style.display = 'block';
+      }
+      function renderReporte(r) {
+        var L = r.lote, u = r.umbral, ult = r.ultima;
+        function caja(t, v, cls) { return '<div class="col-6"><div class="minibox ' + (cls || '') + '"><div class="t">' + t + '</div><div class="n" style="font-size:1rem">' + esc(v || '--') + '</div></div></div>'; }
+        function caja3(t, v) { return '<div class="col-4"><div class="minibox"><div class="t">' + t + '</div><div class="n" style="font-size:0.95rem">' + esc(v || '--') + '</div></div></div>'; }
+        var h = '<div class="text-center mb-3"><h4 class="fw-bold mb-0" style="color:#10451d;">INFORME DE TRAZABILIDAD</h4><p class="text-muted mb-0" style="font-size:0.85rem;">Olega S.A., Reducción, Cba.</p></div>' +
+          '<div class="p-2 mb-3 rounded" style="background:#f8f9fa;border:1px dashed #ced4da;"><h3 class="text-center text-success fw-bold mb-0">LOTE: ' + esc(L.lote) + '</h3><div class="text-center text-muted" style="font-size:0.75rem">' + esc(L.estado) + ' · ' + esc(L.tipoLote) + ' · Tratamiento ' + esc(L.tratamiento || 'sin cargar') + '</div></div>' +
+          '<div class="row g-2 mb-2">' + caja('Destino', L.destino) + caja('Remito', L.remito) + '</div>' +
+          '<div class="row g-2 mb-3">' + caja3('Mezcla', L.mezcla) + caja3('% N2', L.n2 !== null ? fnum(L.n2, 1) + '%' : '') + caja3('% CO2', L.co2 !== null ? fnum(L.co2, 1) + '%' : '') + '</div>' +
+          '<div class="row g-2 mb-3">' + caja3('Mediciones', String(r.mediciones.length)) + caja3('Máx actual', ult.max !== null ? fnum(ult.max) + '%' : '') + '<div class="col-4"><div class="minibox ' + (ult.fuera ? 'rojo' : '') + '"><div class="t">Fuera de límite</div><div class="n" style="font-size:0.95rem">' + ult.fuera + '</div></div></div></div>' +
+          '<div class="titulo-bloque" style="margin-top:6px"><i class="bi bi-moisture me-1"></i>Evolución de oxígeno (%) y códigos</div>' +
+          '<div class="table-responsive"><table class="table table-sm table-bordered heat mb-1"><thead><tr class="table-success"><th>Bolsón</th><th>Código</th>' +
+          r.mediciones.map(function (m) { return '<th title="' + esc(m.fecha) + '">' + esc(m.etiqueta) + '<br><span style="font-weight:400">' + esc(m.fecha.slice(0, 5)) + '</span></th>'; }).join('') + '</tr></thead><tbody>' +
+          r.bolsones.map(function (b) { return '<tr><td class="fw-bold bg-light text-secondary">B' + b.pos + '</td><td class="code">' + esc(b.codigo) + '</td>' + b.valores.map(function (v) { var c = colorO2(v, u); return '<td class="cell" style="background:' + c.bg + ';color:' + c.fg + '">' + (v === null ? '-' : fnum(v)) + '</td>'; }).join('') + '</tr>'; }).join('') +
+          '</tbody><tfoot class="table-light">' + [['Promedio', 'prom'], ['Máximo', 'max'], ['Fuera', 'fuera']].map(function (x) { return '<tr><th colspan="2" class="text-start">' + x[0] + '</th>' + r.mediciones.map(function (m) { return '<th>' + (x[1] === 'fuera' ? m.fuera : fnum(m[x[1]])) + '</th>'; }).join('') + '</tr>'; }).join('') + '</tfoot></table></div>' +
+          '<div class="leyenda mb-2"><span><i style="background:#d1e7dd"></i>bajo</span><span><i style="background:#ffe082"></i>cerca del límite</span><span><i style="background:#b02a37"></i>' + fnum(u) + '% o más</span></div>' +
+          '<div class="titulo-bloque"><i class="bi bi-graph-up me-1"></i>Evolución por big bag</div><div class="chartbox" style="height:300px"><canvas id="chBags"></canvas></div>' +
+          '<div class="titulo-bloque"><i class="bi bi-graph-up-arrow me-1"></i>Evolución del lote</div><div class="chartbox"><canvas id="chLote"></canvas></div>' +
+          '<div class="titulo-bloque"><i class="bi bi-card-text me-1"></i>Observaciones</div><div style="font-size:0.8rem;">' +
+          '<strong>Calidad:</strong> ' + esc(L.obsCalidad || '--') + '<br><strong>Producción:</strong> ' + esc(L.obsProduccion || '--') + '<br><strong>Logística:</strong> ' + esc(L.obsLogistica || '--') +
+          r.mediciones.filter(function (m) { return m.obsProduccion || m.obsCalidad; }).map(function (m) { return '<br><span class="text-muted">' + esc(m.etiqueta) + ':</span> ' + esc([m.obsProduccion, m.obsCalidad].filter(Boolean).join(' · ')); }).join('') + '</div>' +
+          (r.cambios.length ? '<div class="titulo-bloque"><i class="bi bi-arrow-left-right me-1"></i>Cambios de bolsón</div><div class="table-responsive"><table class="table table-sm" style="font-size:0.78rem"><thead><tr class="text-secondary"><th>Fecha</th><th>Salió</th><th>Entró</th></tr></thead><tbody>' +
+            r.cambios.map(function (c) { return '<tr><td>' + esc(c.fecha) + '</td><td>' + esc(c.loteOriginal) + ' B' + esc(c.posOriginal) + '<br><span class="text-muted">' + esc(c.codigoSalio) + '</span></td><td>' + esc(c.loteBackup) + ' B' + esc(c.posBackup) + '<br><span class="text-muted">' + esc(c.codigoEntro) + '</span></td></tr>'; }).join('') + '</tbody></table></div>' : '') +
+          '<p class="text-muted mt-3 mb-0" style="font-size:0.7rem">Generado el ' + esc(r.generado) + '</p>';
+        document.getElementById('hojaPDF').innerHTML = h;
+        var labels = r.mediciones.map(function (m) { return m.etiqueta; });
+        grafico('chBags', { type: 'line', data: { labels: labels, datasets: r.bolsones.map(function (b) {
+          var fuera = b.valores.some(function (v) { return v !== null && v >= u; });
+          return { label: 'B' + b.pos, data: b.valores, borderColor: fuera ? COL.rojo : 'rgba(32,139,58,.45)', backgroundColor: fuera ? COL.rojo : COL.verde, borderWidth: fuera ? 2.5 : 1.2, pointRadius: fuera ? 3 : 1.5, spanGaps: true, tension: .15 };
+        }).concat([{ label: 'Límite', data: labels.map(function () { return u; }), borderColor: COL.tinta, borderDash: [8, 5], borderWidth: 1.5, pointRadius: 0 }]) }, options: { plugins: { legend: { display: false } }, scales: ejes('O₂ (%)', u + 2) } });
+        grafico('chLote', { type: 'line', data: { labels: labels, datasets: [
+          { label: 'Máximo', data: r.mediciones.map(function (m) { return m.max; }), borderColor: COL.rojo, backgroundColor: COL.rojo, borderWidth: 2.5, pointRadius: 4 },
+          { label: 'Promedio', data: r.mediciones.map(function (m) { return m.prom; }), borderColor: COL.verde, backgroundColor: COL.verde, borderWidth: 2.5, pointRadius: 4 },
+          { label: 'Límite', data: labels.map(function () { return u; }), borderColor: COL.tinta, borderDash: [8, 5], borderWidth: 1.5, pointRadius: 0 }] }, options: { plugins: { legend: { position: 'bottom' } }, scales: ejes('O₂ (%)', u + 2) } });
+      }
+      /* ---------- PDF pensado para el teléfono: hoja angosta (120 mm), texto grande, se arma con jsPDF (sin capturar pantalla) ---------- */
+      function pt(x) { return String(x === null || x === undefined ? '' : x).replace(/[₂₃]/g, function (c) { return c === '₂' ? '2' : '3'; }).replace(/[⇄→]/g, '->').replace(/[–—]/g, '-').replace(/[^\x00-\xFF]/g, ''); }
+      function toRGB(c) {
+        if (c.charAt(0) === '#') { var h = c.slice(1); if (h.length === 3) h = h.split('').map(function (x) { return x + x; }).join(''); return [0, 2, 4].map(function (k) { return parseInt(h.substr(k, 2), 16); }); }
+        return c.match(/\d+/g).slice(0, 3).map(Number);
+      }
+      function tipoCorto(m) { return m.tipo === S.tipos.INICIAL ? '24 hs' : (m.tipo === S.tipos.FINAL ? 'Pre-carga' : 'Interm.'); }
+      function etiquetaX(m, i) { return m.horas !== null && m.horas !== undefined ? fnum(m.horas, 0) + ' h' : 'Med. ' + (i + 1); }
+      function imagenGrafico(cfg, w, h) {
+        var cv = document.createElement('canvas'); cv.width = w; cv.height = h;
+        cfg.options = Object.assign({ responsive: false, animation: false, devicePixelRatio: 1 }, cfg.options || {});
+        cfg.plugins = [{ id: 'fondo', beforeDraw: function (c) { var x = c.ctx; x.save(); x.globalCompositeOperation = 'destination-over'; x.fillStyle = '#ffffff'; x.fillRect(0, 0, c.width, c.height); x.restore(); } }];
+        var ch = new Chart(cv, cfg), url = cv.toDataURL('image/jpeg', 0.9); ch.destroy(); return url;
+      }
+      function construirPDF(r) {
+        var J = (window.jspdf && window.jspdf.jsPDF);
+        if (!J) throw new Error('No se cargó el generador de PDF (revisá la conexión a internet).');
+        var W = 120, H = 213, M = 6, CW = W - 2 * M, u = r.umbral, L = r.lote, ult = r.ultima, ms = r.mediciones;
+        var doc = new J({ unit: 'mm', format: [W, H], orientation: 'portrait' });
+        if (typeof doc.autoTable !== 'function') throw new Error('No se cargó el módulo de tablas del PDF.');
+        var y = 0;
+        function hoja() { doc.addPage([W, H]); y = 10; }
+        function hay(alto) { if (y + alto > H - 12) hoja(); }
+        function titulo(txt) {
+          hay(14); doc.setFont('helvetica', 'bold'); doc.setFontSize(9); doc.setTextColor(73, 80, 87);
+          doc.text(pt(txt).toUpperCase(), M, y); doc.setDrawColor(222, 226, 230); doc.setLineWidth(0.3); doc.line(M, y + 1.6, W - M, y + 1.6); y += 6;
+        }
+        function tabla(opts) {
+          doc.autoTable(Object.assign({ startY: y, margin: { left: M, right: M, bottom: 12 }, tableWidth: CW, theme: 'grid',
+            styles: { font: 'helvetica', fontSize: 8, cellPadding: 1.4, halign: 'center', valign: 'middle', lineColor: [255, 255, 255], lineWidth: 0.35, overflow: 'linebreak' } }, opts));
+          y = doc.lastAutoTable.finalY + 4;
+        }
+        // --- Encabezado
+        doc.setFillColor(16, 69, 29); doc.rect(0, 0, W, 25, 'F'); doc.setFillColor(255, 193, 7); doc.rect(0, 25, W, 1.2, 'F');
+        doc.setTextColor(255, 255, 255); doc.setFont('helvetica', 'bold'); doc.setFontSize(13); doc.text('INFORME DE TRAZABILIDAD', W / 2, 11, { align: 'center' });
+        doc.setFont('helvetica', 'normal'); doc.setFontSize(8); doc.text('Olega S.A. - Reducción, Cba.', W / 2, 17, { align: 'center' });
+        doc.setFontSize(7); doc.setTextColor(200, 225, 205); doc.text(pt('Blanched-Super Clean, atmósfera modificada'), W / 2, 22, { align: 'center' });
+        y = 36; doc.setTextColor(32, 139, 58); doc.setFont('helvetica', 'bold'); doc.setFontSize(20); doc.text(pt('LOTE ' + L.lote), W / 2, y, { align: 'center' });
+        y += 6; doc.setFont('helvetica', 'normal'); doc.setFontSize(8); doc.setTextColor(108, 117, 125);
+        doc.text(pt(L.estado + ' - ' + L.tipoLote + (L.tratamiento ? ' - Tratamiento ' + L.tratamiento : '')), W / 2, y, { align: 'center' }); y += 6;
+        // --- Datos del lote
+        var datos = [['Destino', L.destino || '-', 'Remito', L.remito || '-'], ['Mezcla', L.mezcla || '-', 'Responsable', L.responsable || '-'],
+          ['% N2', L.n2 !== null ? fnum(L.n2, 1) + '%' : '-', '% CO2', L.co2 !== null ? fnum(L.co2, 1) + '%' : '-'],
+          ['Tubos N2', L.tubosN2 !== null ? fnum(L.tubosN2, 1) : '-', 'Tubos CO2', L.tubosCO2 !== null ? fnum(L.tubosCO2, 1) : '-']];
+        tabla({ body: datos.map(function (f) { return f.map(pt); }), styles: { fontSize: 8, cellPadding: 1.6, halign: 'left', lineColor: [222, 226, 230], lineWidth: 0.25 },
+          columnStyles: { 0: { cellWidth: 22, fontStyle: 'bold', textColor: [108, 117, 125], fillColor: [248, 249, 250] }, 1: { cellWidth: 32 }, 2: { cellWidth: 24, fontStyle: 'bold', textColor: [108, 117, 125], fillColor: [248, 249, 250] }, 3: { cellWidth: 30 } } });
+        // --- Indicadores
+        var kp = [['Mediciones', String(ms.length), false], ['O2 promedio', ult.prom !== null ? fnum(ult.prom) + '%' : '-', false], ['O2 máximo', ult.max !== null ? fnum(ult.max) + '%' : '-', ult.max !== null && ult.max >= u], ['Fuera de límite', String(ult.fuera), ult.fuera > 0]];
+        var kw = (CW - 3 * 2) / 4; hay(18);
+        kp.forEach(function (k, i) {
+          var x = M + i * (kw + 2);
+          doc.setFillColor.apply(doc, k[2] ? [248, 215, 218] : [233, 245, 236]); doc.setDrawColor.apply(doc, k[2] ? [176, 42, 55] : [32, 139, 58]); doc.setLineWidth(0.3);
+          doc.roundedRect(x, y, kw, 15, 1.5, 1.5, 'FD');
+          doc.setFont('helvetica', 'normal'); doc.setFontSize(6); doc.setTextColor(90, 98, 104); doc.text(pt(k[0]).toUpperCase(), x + kw / 2, y + 4.5, { align: 'center' });
+          doc.setFont('helvetica', 'bold'); doc.setFontSize(12); doc.setTextColor.apply(doc, k[2] ? [132, 32, 41] : [16, 69, 29]); doc.text(pt(k[1]), x + kw / 2, y + 11.5, { align: 'center' });
+        });
+        y += 20;
+        // --- Gráficos: se dibujan aparte, con letra grande y fondo blanco, para que se lean bien en el celular
+        var F = 24, etiquetas = ms.map(etiquetaX);
+        function ejesPdf() { return { x: { grid: { display: false }, ticks: { font: { size: F }, maxRotation: 0, autoSkip: true } }, y: { beginAtZero: true, suggestedMax: u + 2, grid: { color: '#e3e6e8' }, ticks: { font: { size: F } }, title: { display: true, text: 'O2 (%)', font: { size: F } } } }; }
+        var GH = CW * 600 / 900;
+        // Resumen del lote (primera hoja)
+        if (ms.length) {
+          var img2 = imagenGrafico({ type: 'line', data: { labels: etiquetas, datasets: [
+            { label: 'Máximo', data: ms.map(function (m) { return m.max; }), borderColor: '#b02a37', backgroundColor: '#b02a37', borderWidth: 5, pointRadius: 7, tension: .15 },
+            { label: 'Promedio', data: ms.map(function (m) { return m.prom; }), borderColor: '#208b3a', backgroundColor: '#208b3a', borderWidth: 5, pointRadius: 7, tension: .15 },
+            { label: 'Límite ' + fnum(u) + '%', data: etiquetas.map(function () { return u; }), borderColor: '#212529', borderDash: [14, 8], borderWidth: 3, pointRadius: 0 }] },
+            options: { plugins: { legend: { display: true, position: 'bottom', labels: { font: { size: F }, boxWidth: 36 } } }, scales: ejesPdf() } }, 900, 600);
+          titulo('Evolución del lote (horas desde el tratamiento)'); hay(GH + 4);
+          doc.addImage(img2, 'JPEG', M, y, CW, GH); y += GH + 4;
+        }
+        // --- Matriz de O2: tramos de 5 mediciones, cada tramo en una hoja, para que las celdas sean grandes y legibles
+        var POR = 5, nTramos = Math.ceil(ms.length / POR);
+        if (!ms.length) { titulo('Evolución de oxígeno (%) por big bag'); doc.setFontSize(9); doc.setTextColor(108, 117, 125); doc.text('Sin registros de oxígeno.', M, y); y += 8; }
+        for (var k = 0; k < ms.length; k += POR) {
+          (function (k0) {
+            var chunk = ms.slice(k0, k0 + POR), nT = k0 / POR + 1;
+            if (y + 30 + r.bolsones.length * 5.6 + 8 > H - 12) hoja();
+            titulo(nT === 1 ? 'Evolución de oxígeno (%) por big bag' : 'Oxígeno (%) - mediciones ' + (k0 + 1) + ' a ' + (k0 + chunk.length) + ' (continuación)');
+            var cab = ['Big bag', 'Código'].concat(chunk.map(function (m) { return pt(tipoCorto(m) + '\n' + (m.horas !== null ? fnum(m.horas, 0) + ' h' : '') + '\n' + m.fecha.slice(0, 5)); }));
+            var cuerpo = r.bolsones.map(function (b) { return ['B' + b.pos, pt(b.codigo)].concat(chunk.map(function (m, j) { var v = b.valores[k0 + j]; return v === null || v === undefined ? '-' : fnum(v); })); });
+            function pie(nom, f) { return [{ content: nom, colSpan: 2, styles: { halign: 'left' } }].concat(chunk.map(function (m) { return f(m); })); }
+            var cw = (CW - 31) / chunk.length;
+            var cs = { 0: { cellWidth: 13, fontStyle: 'bold', halign: 'left', textColor: [90, 98, 104] }, 1: { cellWidth: 18, halign: 'left', textColor: [108, 117, 125], fontSize: 7.5 } };
+            for (var c = 0; c < chunk.length; c++) cs[2 + c] = { cellWidth: cw };
+            tabla({ head: [cab], body: cuerpo, foot: [pie('Promedio', function (m) { return fnum(m.prom); }), pie('Máximo', function (m) { return fnum(m.max); }), pie('Fuera de límite', function (m) { return String(m.fuera); })],
+              columnStyles: cs, showFoot: 'lastPage', styles: { fontSize: 8, cellPadding: 1.1, halign: 'center', valign: 'middle', lineColor: [255, 255, 255], lineWidth: 0.35 },
+              headStyles: { fillColor: [209, 231, 221], textColor: [16, 69, 29], fontSize: 7, fontStyle: 'bold', cellPadding: 1.2 },
+              footStyles: { fillColor: [238, 241, 243], textColor: [33, 37, 41], fontStyle: 'bold', fontSize: 8 },
+              didParseCell: function (d) {
+                if (d.section === 'body' && d.column.index >= 2) {
+                  var v = r.bolsones[d.row.index].valores[k0 + d.column.index - 2], col = colorO2(v === undefined ? null : v, u);
+                  d.cell.styles.fillColor = toRGB(col.bg); d.cell.styles.textColor = toRGB(col.fg); d.cell.styles.fontStyle = 'bold'; d.cell.styles.fontSize = 8.5;
+                }
+                if (d.section === 'body' && d.column.index < 2) d.cell.styles.fillColor = [248, 249, 250];
+              } });
+            if (nT === nTramos) {
+              hay(8); var lx = M; doc.setFontSize(7); doc.setFont('helvetica', 'normal');
+              [[[209, 231, 221], 'bajo'], [[255, 224, 130], 'cerca del límite'], [[176, 42, 55], fnum(u) + '% o más (fuera de límite)']].forEach(function (it) {
+                doc.setFillColor.apply(doc, it[0]); doc.rect(lx, y - 2.6, 3.5, 3.5, 'F'); doc.setTextColor(90, 98, 104); doc.text(pt(it[1]), lx + 5, y);
+                lx += 5 + doc.getTextWidth(pt(it[1])) + 5;
+              });
+              y += 8;
+            }
+          })(k);
+        }
+        // --- Evolución por big bag
+        if (ms.length) {
+          var rojos = [];
+          var dsBags = r.bolsones.map(function (b) {
+            var fuera = b.valores.some(function (v) { return v !== null && v >= u; }); if (fuera) rojos.push('B' + b.pos);
+            return { label: 'B' + b.pos, data: b.valores, borderColor: fuera ? '#b02a37' : 'rgba(32,139,58,.5)', backgroundColor: fuera ? '#b02a37' : '#208b3a', borderWidth: fuera ? 4 : 2, pointRadius: fuera ? 5 : 3, spanGaps: true, tension: .15 };
+          }).concat([{ label: 'Límite', data: etiquetas.map(function () { return u; }), borderColor: '#212529', borderDash: [14, 8], borderWidth: 3, pointRadius: 0 }]);
+          var img1 = imagenGrafico({ type: 'line', data: { labels: etiquetas, datasets: dsBags }, options: { plugins: { legend: { display: false } }, scales: ejesPdf() } }, 900, 600);
+          hay(GH + 24); titulo('Evolución por big bag'); doc.addImage(img1, 'JPEG', M, y, CW, GH); y += GH + 3;
+          doc.setFontSize(7.5); doc.setTextColor(90, 98, 104); doc.setFont('helvetica', 'normal');
+          var nota = rojos.length ? 'En rojo, con algún valor fuera de límite: ' + rojos.join(', ') + '. Línea punteada: límite ' + fnum(u) + '%.' : 'Ningún big bag llegó al límite de ' + fnum(u) + '% (linea punteada).';
+          var lineas = doc.splitTextToSize(pt(nota), CW); doc.text(lineas, M, y); y += lineas.length * 3.4 + 5;
+        }
+        // --- Observaciones
+        titulo('Observaciones');
+        var obs = [['Calidad', L.obsCalidad || '-'], ['Producción', L.obsProducción || '-'], ['Logística', L.obsLogística || '-']];
+        ms.forEach(function (m) { if (m.obsProducción || m.obsCalidad) obs.push([tipoCorto(m) + (m.horas !== null ? ' ' + fnum(m.horas, 0) + ' h' : ''), [m.obsProducción, m.obsCalidad].filter(Boolean).join(' / ')]); });
+        tabla({ body: obs.map(function (f) { return [pt(f[0]), pt(f[1])]; }), styles: { fontSize: 8, cellPadding: 1.6, halign: 'left', lineColor: [222, 226, 230], lineWidth: 0.25 }, columnStyles: { 0: { cellWidth: 24, fontStyle: 'bold', textColor: [108, 117, 125], fillColor: [248, 249, 250] }, 1: { cellWidth: CW - 24 } } });
+        // --- Cambios de bolsón
+        if (r.cambios.length) {
+          titulo('Cambios de bolsón');
+          tabla({ head: [['Fecha', 'Salió', 'Entró']], body: r.cambios.map(function (c) { return [pt(c.fecha), pt(c.loteOriginal + ' B' + c.posOriginal + '\n' + c.codigoSalio), pt(c.loteBackup + ' B' + c.posBackup + '\n' + c.codigoEntro)]; }),
+            styles: { fontSize: 7.5, cellPadding: 1.5, halign: 'left', lineColor: [222, 226, 230], lineWidth: 0.25 }, headStyles: { fillColor: [255, 243, 205], textColor: [102, 77, 3] }, columnStyles: { 0: { cellWidth: 24 } } });
+        }
+        // --- Pie de página en todas las hojas
+        var n = doc.getNumberOfPages();
+        for (var p = 1; p <= n; p++) {
+          doc.setPage(p); doc.setFont('helvetica', 'normal'); doc.setFontSize(7); doc.setTextColor(140, 148, 154);
+          doc.text(pt('Lote ' + L.lote + ' - generado el ' + r.generado), M, H - 5); doc.text(p + ' / ' + n, W - M, H - 5, { align: 'right' });
+        }
+        return doc;
+      }
+
+      var ultimoPdf = null;
+      async function generarPDF(compartir) {
+        if (!S.rep) return;
+        var btn = document.getElementById(compartir ? 'btnCompartir' : 'btnPdf'), orig = btn.innerHTML;
+        btn.disabled = true; cargando(compartir ? 'Preparando el PDF para compartir…' : 'Generando el PDF…');
+        document.getElementById('msjPdf').innerHTML = '';
+        try {
+          await new Promise(function (r) { setTimeout(r, 80); });   // deja que se vea el círculo antes del trabajo pesado
+          var doc = construirPDF(S.rep), nombre = 'Trazabilidad_' + S.loteInforme + '.pdf', blob = doc.output('blob');
+          if (ultimoPdf) { try { URL.revokeObjectURL(ultimoPdf); } catch (e) {} }
+          ultimoPdf = URL.createObjectURL(blob);
+          listo(); exito('PDF listo');
+          var compartido = false;
+          if (compartir && navigator.canShare) {
+            try { var f = new File([blob], nombre, { type: 'application/pdf' }); if (navigator.canShare({ files: [f] })) { await navigator.share({ files: [f], title: nombre }); compartido = true; } }
+            catch (e) { if (e && e.name === 'AbortError') compartido = true; }
+          }
+          if (!compartido) {
+            var a = document.createElement('a'); a.href = ultimoPdf; a.download = nombre; a.style.display = 'none'; document.body.appendChild(a); a.click(); a.remove();
+          }
+          document.getElementById('msjPdf').innerHTML = '<div class="alert alert-success py-2 mb-0" style="font-size:0.85rem"><i class="bi bi-check-circle-fill me-1"></i>PDF generado. Si no se descargó solo, <a class="fw-bold" href="' + ultimoPdf + '" target="_blank" rel="noopener" download="' + esc(nombre) + '">tocá acá para abrirlo</a>.</div>';
+        } catch (e) {
+          listo(); aviso('msjPdf', 'No se pudo generar el PDF: ' + errMsg(e), 'danger', 12000);
+        } finally { btn.disabled = false; btn.innerHTML = orig; }
+      }
+      document.getElementById('btnPdf').onclick = function () { generarPDF(false); };
+      document.getElementById('btnCompartir').onclick = function () { generarPDF(true); };
+      try { if (navigator.canShare && typeof File !== 'undefined') document.getElementById('btnCompartir').style.display = ''; } catch (e) {}
+
+      /* ================== 5. ADMINISTRADOR ================== */
+      function prepararAdmin() {
+        if (!S.admin) { document.getElementById('adminPuerta').style.display = 'block'; document.getElementById('adminPanel').style.display = 'none'; return; }
+        llenarAdminLotes();
+      }
+      function llenarAdminLotes() {
+        var prev = document.getElementById('adminLote').value;
+        opciones(document.getElementById('adminLote'), S.lotes.map(function (l) { return l.lote; }).reverse(), 'Elegí un lote...');
+        if (prev) document.getElementById('adminLote').value = prev;
+        adminLoteCambia();
+      }
+      function adminCaducado(r) { if (r && !r.ok && /sesión de administrador/.test(r.error || '')) { S.admin = null; prepararAdmin(); } }
+      document.getElementById('btnAdminIngresar').onclick = async function () {
+        var btn = this; btn.disabled = true; cargando('Verificando el PIN…');
+        try {
+          var r = await api('verificarPinAdmin', document.getElementById('adminPin').value);
+          if (!r.ok) return aviso('msjAdminPin', r.error, 'danger', 6000);
+          S.admin = r.token; document.getElementById('adminPin').value = '';
+          document.getElementById('adminPuerta').style.display = 'none'; document.getElementById('adminPanel').style.display = 'block';
+          llenarAdminLotes(); cargarAuditoria();
+          setTimeout(function () { S.admin = null; if (sections[5] && document.getElementById('seccionAdmin').style.display === 'block') prepararAdmin(); }, r.minutos * 60000);
+        } catch (e) { aviso('msjAdminPin', 'Fallo de conexión: ' + errMsg(e), 'danger', 6000); } finally { btn.disabled = false; listo(); }
+      };
+      document.getElementById('adminPin').addEventListener('keydown', function (e) { if (e.key === 'Enter') document.getElementById('btnAdminIngresar').click(); });
+      async function adminOp(fn, args, btn) {
+        btn.disabled = true; cargando('Procesando…');
+        try {
+          var r = await api.apply(null, [fn, S.admin].concat(args));
+          if (!r.ok) { adminCaducado(r); aviso('msjAdmin', r.error, 'danger', 8000); return false; }
+          aviso('msjAdmin', r.mensaje, 'success', 6000); await recargarLotes(); llenarAdminLotes(); cargarAuditoria(); return true;
+        } catch (e) { aviso('msjAdmin', 'Fallo de conexión: ' + errMsg(e), 'danger', 8000); return false; } finally { btn.disabled = false; listo(); }
+      }
+      async function adminLoteCambia() {
+        var l = lotePorCodigo(document.getElementById('adminLote').value), med = document.getElementById('adminMed');
+        document.getElementById('adminLoteInfo').innerHTML = l ? 'Estado: <b>' + esc(l.estado) + '</b> · Tipo: <b>' + esc(l.tipoLote) + '</b> · ' + l.mediciones + ' mediciones' : '';
+        med.innerHTML = '';
+        if (l) document.getElementById('adminTipo').value = l.tipoLote;
+        if (l && S.admin) { try { var r = await api('obtenerMedicionesLote', S.admin, l.lote); if (r.ok) med.innerHTML = r.mediciones.map(function (m) { return '<option value="' + esc(m.id) + '">' + esc(m.id) + ' · ' + esc(m.tipo) + ' · ' + esc(m.fecha) + '</option>'; }).join(''); } catch (e) {} }
+      }
+      document.getElementById('adminLote').addEventListener('change', adminLoteCambia);
+      function adminLoteElegido() { var l = document.getElementById('adminLote').value; if (!l) aviso('msjAdmin', 'Elegí un lote.', 'danger', 4000); return l; }
+      document.getElementById('btnReabrir').onclick = async function () { var l = adminLoteElegido(); if (l && await adminOp('reabrirLote', [l, document.getElementById('adminMotivo').value], this)) document.getElementById('adminMotivo').value = ''; };
+      document.getElementById('btnCerrar').onclick = function () { var l = adminLoteElegido(); if (l) adminOp('cerrarLote', [l, document.getElementById('adminMotivo').value], this); };
+      document.getElementById('btnAdminTipo').onclick = function () { var l = adminLoteElegido(); if (l) adminOp('cambiarTipoLote', [l, document.getElementById('adminTipo').value], this); };
+      document.getElementById('btnAnular').onclick = async function () {
+        var id = document.getElementById('adminMed').value; if (!id) return aviso('msjAdmin', 'Elegí una medición.', 'danger', 4000);
+        if (!await confirmar('¿Anular ' + id + '?', ['Sus valores dejan de contar en el tablero y el reporte. Queda registrada en la auditoría.'], 'Anular')) return;
+        if (await adminOp('anularMedicion', [id, document.getElementById('adminMedMotivo').value], this)) document.getElementById('adminMedMotivo').value = '';
+      };
+      async function cargarAuditoria() {
+        try {
+          var r = await api('obtenerAuditoria', S.admin, 60); if (!r.ok) return adminCaducado(r);
+          document.getElementById('adminAud').innerHTML = '<table class="table table-sm" style="font-size:0.75rem"><thead><tr class="text-secondary"><th>Fecha</th><th>Acción</th><th>Ref.</th><th>Detalle</th></tr></thead><tbody>' +
+            r.filas.map(function (f) { return '<tr><td>' + esc(f.fecha) + '</td><td>' + esc(f.accion) + '</td><td>' + esc(f.ref) + '</td><td>' + esc(f.detalle) + '</td></tr>'; }).join('') + '</tbody></table>';
+        } catch (e) {}
+      }
+
+
+      /* ================== BORRADORES (no se pierde la carga si salís de la app) ================== */
+      var BORR = {
+        alta: ['loteCodigos', 'respCodigos', 'remitoCodigos', 'tipoLoteCodigos', 'tratCodigos'],
+        o2: ['loteO2', 'instanciaO2', 'fechaO2', 'mezclaO2', 'porcN2', 'porcCO2', 'tubosN2', 'tubosCO2', 'destinoO2', 'respO2', 'obsProdO2', 'obsCalidadO2'],
+        reemplazo: ['loteExportacion', 'posicionSaliente', 'loteBackup', 'posicionEntrante', 'respReemplazo'],
+        stock: ['tipo', 'fechaIngreso', 'cantidad', 'cliente', 'responsableStock', 'observaciones']
+      };
+      var BORR_FORM = { alta: 'formularioCodigos', o2: 'formularioO2', reemplazo: 'formularioReemplazo', stock: 'formularioStock' };
+      var BORR_SECCION = { alta: 'seccionCodigos', o2: 'seccionO2', reemplazo: 'seccionO2', stock: 'seccionFormulario' };
+      var BORR_VENCE = 3 * 24 * 3600 * 1000;
+      var restaurando = false;
+      var manuales = {};   // fechas que la persona tocó (si no, se vuelve a usar "ahora")
+      ['tratCodigos', 'fechaO2'].forEach(function (id) { document.getElementById(id).addEventListener('input', function () { manuales[id] = true; }); });
+
+      function lsGet(k) { try { return localStorage.getItem(k); } catch (e) { return null; } }
+      function lsSet(k, v) { try { localStorage.setItem(k, v); } catch (e) {} }
+      function lsDel(k) { try { localStorage.removeItem(k); } catch (e) {} }
+      function borrarBorrador(n) { lsDel('atm_borr_' + n); }
+
+      function leerForm(n) {
+        var d = { f: {}, m: {}, x: {} };
+        BORR[n].forEach(function (id) {
+          var v = document.getElementById(id).value;
+          if (v === '' || v === null) return;
+          if ((id === 'tratCodigos' || id === 'fechaO2') && !manuales[id]) return;
+          d.f[id] = v; if (id === 'tratCodigos' || id === 'fechaO2') d.m[id] = 1;
+        });
+        if (n === 'alta') { d.x.n = nCodigos; d.x.cods = $$('.cod-input', contCodigos).map(function (i) { return i.value; }); }
+        if (n === 'o2') { d.x.vals = {}; $$('input', contO2).forEach(function (i) { if (i.value !== '') d.x.vals[i.dataset.pos] = i.value; }); }
+        var clave = { alta: ['loteCodigos', 'remitoCodigos'], o2: ['loteO2'], reemplazo: ['loteExportacion', 'loteBackup'], stock: ['tipo', 'cantidad'] }[n];
+        var tiene = clave.some(function (id) { return d.f[id]; }) ||
+          (n === 'alta' && d.x.cods.some(Boolean)) || (n === 'o2' && Object.keys(d.x.vals).length > 0);
+        return tiene ? d : null;
+      }
+      function guardarForm(n) {
+        if (restaurando || !S.cfg) return;
+        var d = leerForm(n);
+        if (d) { d.t = Date.now(); lsSet('atm_borr_' + n, JSON.stringify(d)); } else borrarBorrador(n);
+      }
+      function guardarTodos() { Object.keys(BORR).forEach(guardarForm); }
+      var guardarDif = {};
+      Object.keys(BORR_FORM).forEach(function (n) {
+        var f = document.getElementById(BORR_FORM[n]);
+        ['input', 'change'].forEach(function (ev) { f.addEventListener(ev, function () { clearTimeout(guardarDif[n]); guardarDif[n] = setTimeout(function () { guardarForm(n); }, 300); }); });
+      });
+      ['btnMasCodigo', 'btnMenosCodigo'].forEach(function (id) { document.getElementById(id).addEventListener('click', function () { guardarForm('alta'); }); });
+      // Al salir de la app o cambiar de pestaña se guarda de inmediato
+      document.addEventListener('visibilitychange', function () { if (document.visibilityState === 'hidden') guardarTodos(); });
+      window.addEventListener('pagehide', guardarTodos);
+
+      function leerBorrador(n) {
+        var raw = lsGet('atm_borr_' + n); if (!raw) return null;
+        try { var d = JSON.parse(raw); if (!d || !d.f || Date.now() - (d.t || 0) > BORR_VENCE) { borrarBorrador(n); return null; } return d; }
+        catch (e) { borrarBorrador(n); return null; }
+      }
+      function ponerCampos(n, d, excepto) {
+        BORR[n].forEach(function (id) {
+          if (excepto && excepto.indexOf(id) >= 0) return;
+          if (d.f[id] === undefined) return;
+          var el = document.getElementById(id);
+          el.value = d.f[id];
+          if (el.value !== d.f[id]) el.value = '';   // la opción ya no existe en la lista
+          if (d.m && d.m[id]) manuales[id] = true;
+        });
+      }
+      function resetAlta() {
+        var resp = document.getElementById('respCodigos').value;
+        document.getElementById('formularioCodigos').reset(); document.getElementById('respCodigos').value = resp;
+        document.getElementById('tratCodigos').value = S.ahora; document.getElementById('alertaLoteAlta').innerHTML = '';
+        nCodigos = S.cfg.bolsonesPorLote; contCodigos.innerHTML = ''; armarCodigos();
+        manuales.tratCodigos = false; borrarBorrador('alta');
+      }
+      function resetO2() {
+        var resp = document.getElementById('respO2').value;
+        document.getElementById('formularioO2').reset(); document.getElementById('respO2').value = resp;
+        document.getElementById('alertaLote').innerHTML = ''; document.getElementById('loteO2').classList.remove('is-valid', 'is-invalid');
+        document.getElementById('fechaO2').value = S.ahora; document.getElementById('horasO2').textContent = '';
+        S.bolO2 = null; armarO2(S.cfg.bolsonesPorLote, null); instanciaOpciones(null);
+        document.getElementById('btnGuardarO2').disabled = true;
+        manuales.fechaO2 = false; borrarBorrador('o2');
+      }
+      function resetReemplazo() {
+        var resp = document.getElementById('respReemplazo').value;
+        document.getElementById('formularioReemplazo').reset(); document.getElementById('respReemplazo').value = resp;
+        ['loteExportacion', 'loteBackup'].forEach(function (id) { document.getElementById(id).classList.remove('is-valid', 'is-invalid'); });
+        posOpciones('posicionSaliente', S.cfg.bolsonesPorLote); posOpciones('posicionEntrante', S.cfg.bolsonesPorLote); vistaReemplazo();
+        borrarBorrador('reemplazo');
+      }
+      function resetStock() {
+        var resp = document.getElementById('responsableStock').value;
+        document.getElementById('formularioStock').reset(); document.getElementById('responsableStock').value = resp;
+        ['divFechaIngreso', 'divCliente'].forEach(function (id) { document.getElementById(id).style.display = 'none'; });
+        borrarBorrador('stock');
+      }
+      async function descartarSeccion(seccion, banner) {
+        if (!await confirmar('¿Descartar la carga?', ['Se pierde lo que escribiste y no guardaste.'], 'Descartar')) return;
+        cargando('Descartando la carga…');
+        await new Promise(function (r) { setTimeout(r, 500); });
+        restaurando = true;
+        try {
+          if (seccion === 'seccionCodigos') resetAlta();
+          if (seccion === 'seccionO2') { resetO2(); resetReemplazo(); }
+          if (seccion === 'seccionFormulario') resetStock();
+          banner.remove();
+        } finally { restaurando = false; }
+        exito('Carga descartada');
+      }
+      function bannerBorrador(seccion, n, texto) {
+        var sec = document.getElementById(seccion);
+        var b = document.createElement('div');
+        b.className = 'alert alert-warning py-2 px-3 mb-3 d-flex justify-content-between align-items-center gap-2'; b.style.fontSize = '0.8rem';
+        b.innerHTML = '<span><i class="bi bi-clock-history me-1"></i>' + esc(texto) + '</span><button type="button" class="btn btn-sm btn-outline-danger fw-bold">Descartar</button>';
+        b.querySelector('button').onclick = function () { descartarSeccion(seccion, b); };
+        sec.insertBefore(b, sec.firstChild);
+      }
+
+      async function restaurarBorradores() {
+        restaurando = true;
+        var recuperados = [];
+        try {
+          var d = leerBorrador('alta');
+          if (d) {
+            ponerCampos('alta', d);
+            nCodigos = Math.max(1, Math.min(60, d.x.n || nCodigos)); armarCodigos();
+            $$('.cod-input', contCodigos).forEach(function (i, k) { i.value = (d.x.cods || [])[k] || ''; });
+            validarCodigos(); document.getElementById('loteCodigos').dispatchEvent(new Event('input'));
+            recuperados.push('seccionCodigos'); bannerBorrador('seccionCodigos', 'alta', 'Recuperamos el alta de lote que tenías a medias.');
+          }
+          d = leerBorrador('o2');
+          if (d) {
+            document.getElementById('loteO2').value = d.f.loteO2 || '';
+            if (d.f.loteO2) await verificarO2Ahora();
+            if (S.bolO2) {
+              var ins = document.getElementById('instanciaO2');
+              if (d.f.instanciaO2 && !(ins.querySelector('option[value="' + d.f.instanciaO2 + '"]') || {}).disabled) { ins.value = d.f.instanciaO2; ins.dispatchEvent(new Event('change')); }
+              ponerCampos('o2', d, ['loteO2', 'instanciaO2']);
+              Object.keys(d.x.vals || {}).forEach(function (pos) { var i = document.getElementById('o2_' + pos); if (i) { i.value = d.x.vals[pos]; i.dispatchEvent(new Event('input')); } });
+              horasO2();
+            } else { ponerCampos('o2', d, ['loteO2', 'instanciaO2']); }
+            recuperados.push('seccionO2'); bannerBorrador('seccionO2', 'o2', 'Recuperamos la medición de O₂ que tenías a medias.');
+          }
+          d = leerBorrador('reemplazo');
+          if (d) {
+            ponerCampos('reemplazo', d, ['posicionSaliente', 'posicionEntrante']);
+            ajustarPosiciones('loteExportacion', 'posicionSaliente'); ajustarPosiciones('loteBackup', 'posicionEntrante');
+            if (d.f.posicionSaliente) document.getElementById('posicionSaliente').value = d.f.posicionSaliente;
+            if (d.f.posicionEntrante) document.getElementById('posicionEntrante').value = d.f.posicionEntrante;
+            vistaReemplazo(); if (recuperados.indexOf('seccionO2') < 0) { recuperados.push('seccionO2'); bannerBorrador('seccionO2', 'reemplazo', 'Recuperamos el cambio de bolsón que tenías a medias.'); }
+          }
+          d = leerBorrador('stock');
+          if (d) {
+            var t = document.getElementById('tipo'); t.value = d.f.tipo || ''; t.dispatchEvent(new Event('change'));
+            ponerCampos('stock', d, ['tipo']);
+            recuperados.push('seccionFormulario'); bannerBorrador('seccionFormulario', 'stock', 'Recuperamos el movimiento de stock que tenías a medias.');
+          }
+          // Volver a la solapa donde estabas
+          var ult = parseInt(lsGet('atm_tab'), 10);
+          if (!isNaN(ult) && ult >= 0 && ult < 5) irSeccion(ult);
+          else if (recuperados.length) irSeccion(sections.indexOf(recuperados[0]));
+        } finally { restaurando = false; }
+      }
+
+
+      /* ================== APP INSTALABLE (PWA) ================== */
+      var evInstalar = null;
+      function esStandalone() { return (window.matchMedia && matchMedia('(display-mode: standalone)').matches) || navigator.standalone === true; }
+      function esIOS() { return /iphone|ipad|ipod/i.test(navigator.userAgent) && !window.MSStream; }
+      function instalarOculto() { var t = parseInt(lsGet('atm_instalar_no'), 10); return !isNaN(t) && Date.now() - t < 7 * 24 * 3600 * 1000; }
+      function mostrarInstalar() {
+        if (EN_APPS_SCRIPT || esStandalone() || instalarOculto() || document.getElementById('instalar').classList.contains('on')) return;
+        document.getElementById('instalar').classList.add('on');
+      }
+      function ocultarInstalar(recordar) { document.getElementById('instalar').classList.remove('on'); if (recordar) lsSet('atm_instalar_no', String(Date.now())); }
+      window.addEventListener('beforeinstallprompt', function (e) { e.preventDefault(); evInstalar = e; setTimeout(mostrarInstalar, 1800); });
+      window.addEventListener('appinstalled', function () { evInstalar = null; ocultarInstalar(false); });
+      document.getElementById('btnInstalarNo').onclick = function () { ocultarInstalar(true); };
+      document.getElementById('btnInstalarSi').onclick = async function () {
+        if (evInstalar) {
+          ocultarInstalar(false); evInstalar.prompt();
+          try { var c = await evInstalar.userChoice; if (c.outcome !== 'accepted') lsSet('atm_instalar_no', String(Date.now())); } catch (e) {}
+          evInstalar = null;
+        } else ocultarInstalar(true);
+      };
+      if (!EN_APPS_SCRIPT && esIOS() && !esStandalone()) {   // iPhone no avisa solo: se explica el paso a mano
+        document.getElementById('instalarTxt').innerHTML = 'Tocá <b>Compartir</b> <i class="bi bi-box-arrow-up"></i> y después <b>"Añadir a pantalla de inicio"</b>.';
+        document.getElementById('btnInstalarSi').style.display = 'none'; document.getElementById('btnInstalarNo').textContent = 'Entendido';
+        setTimeout(mostrarInstalar, 2500);
+      }
+      if (!EN_APPS_SCRIPT && 'serviceWorker' in navigator && /^https?:$/.test(location.protocol)) {
+        window.addEventListener('load', function () { navigator.serviceWorker.register('sw.js').catch(function () {}); });
+      }
+
+      /* Enlace al servidor (Apps Script): normalmente viene en config.js; si falta se pide una sola vez */
+      function pedirUrlApi() {
+        return new Promise(function (res) {
+          var o = document.createElement('div'); o.className = 'overlay-conf';
+          o.innerHTML = '<div class="modal-conf"><h5 class="fw-bold" style="color:#10451d"><i class="bi bi-link-45deg me-1"></i>Conectar con el servidor</h5><p class="text-muted" style="font-size:0.85rem">Pegá el enlace de la aplicación web de Apps Script (termina en <b>/exec</b>). Se pide una sola vez.</p><input type="url" class="form-control mb-2" id="urlApiInp" placeholder="https://script.google.com/macros/s/.../exec" autocomplete="off"><div class="text-danger fw-bold mb-2" style="font-size:0.8rem" id="urlApiErr"></div><button class="btn btn-success w-100 fw-bold" id="urlApiOk">Guardar</button></div>';
+          document.body.appendChild(o);
+          o.querySelector('#urlApiOk').onclick = function () {
+            var v = o.querySelector('#urlApiInp').value.trim();
+            if (!/^https:\/\/script\.google\.com\/macros\/s\/[\w-]+\/exec$/.test(v)) { o.querySelector('#urlApiErr').textContent = 'El enlace debe empezar con https://script.google.com/macros/s/ y terminar en /exec'; return; }
+            lsSet('atm_api_url', v); o.remove(); res();
+          };
+        });
+      }
+
+      iniciar();
+    </script>
+  </body>
+</html>
